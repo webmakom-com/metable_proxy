@@ -1,0 +1,14 @@
+{
+    "HttpServer": {
+        "Host": "0.0.0.0",
+        "Port": 8080,
+        "Token": ""
+    },
+    "Contract": {
+        "Server": "",
+        "ABI": "",
+        "Address": "",
+        "Private": "",
+        "GasLimit": 0,
+    }
+}

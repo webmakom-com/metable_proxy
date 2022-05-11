@@ -1,0 +1,13 @@
+{
+    "HttpServer": {
+        "Host": "0.0.0.0",
+        "Port": 8080
+    },
+    "GlassNode": {
+        "Url": "https://api.glassnode.com/v1/metrics/mining/",
+        "Key": "289Q8RRwM0d59cczxireT9FEZck",
+        "Period": 3,
+        "Interval": 5,
+        "Retries": 10
+    }
+}

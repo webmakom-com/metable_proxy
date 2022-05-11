@@ -1,0 +1,17 @@
+{
+    "HttpServer": {
+        "Host": "0.0.0.0",
+        "Port": "8812"
+    },
+    "Query": "{\"query\":\"{\\r\\n  pairs (where: {reserveUSD_gt: \\\"100000\\\"}) {\\r\\n    id\\r\\n    reserve0\\r\\n    reserve1\\r\\n    reserveUSD\\r\\n    trackedReserveETH\\r\\n    token0Price\\r\\n    token1Price\\r\\n    volumeUSD\\r\\n    txCount\\r\\n    token0 {\\r\\n      id\\r\\n      symbol\\r\\n      name\\r\\n      decimals\\r\\n    }\\r\\n    token1 {\\r\\n      id\\r\\n      symbol\\r\\n      name\\r\\n      decimals\\r\\n    }\\r\\n  }\\r\\n}\",\"variables\":{}}",
+    "Storage": {
+        "Url": "http://sai-storage:8811",
+        "Auth": {
+            "Email": "admin@saistorage.com",
+            "Password": "123"
+        }
+    },
+    "Graph": "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2",
+    "Log": "",
+    "Sleep": 300
+}
