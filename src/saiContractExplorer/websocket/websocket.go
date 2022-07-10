@@ -3,8 +3,9 @@ package websocket
 import (
 	"bytes"
 	"fmt"
-	"github.com/webmakom-com/hv/src/saiContractExplorer/config"
 	"net/http"
+
+	"github.com/webmakom-com/saiContractExplorer/config"
 )
 
 type Manager struct {

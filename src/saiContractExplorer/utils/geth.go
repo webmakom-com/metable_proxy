@@ -2,8 +2,9 @@ package utils
 
 import (
 	"fmt"
+
 	"github.com/onrik/ethrpc"
-	"github.com/webmakom-com/hv/src/saiContractExplorer/config"
+	"github.com/webmakom-com/saiContractExplorer/config"
 )
 
 func NewGethClient(c config.Configuration) (*ethrpc.EthRPC, error) {

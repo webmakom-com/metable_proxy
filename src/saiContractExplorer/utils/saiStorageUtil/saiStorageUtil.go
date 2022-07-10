@@ -4,30 +4,31 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/webmakom-com/hv/src/saiContractExplorer/utils/saiUtil"
+
+	"github.com/webmakom-com/saiContractExplorer/utils/saiUtil"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 type Database struct {
-	url string
-	email string
+	url      string
+	email    string
 	password string
 }
 
 func Storage(Url string, Email string, Password string) Database {
 	return Database{
-		url: Url,
-		email: Email,
+		url:      Url,
+		email:    Email,
 		password: Password,
 	}
 }
 
 type StorageRequest struct {
-	token 		 string
-	collection   string
-	options      interface{}
-	criteria     interface{}
-	data         interface{}
+	token      string
+	collection string
+	options    interface{}
+	criteria   interface{}
+	data       interface{}
 }
 
 func (s StorageRequest) toJson() ([]byte, error) {
@@ -58,7 +59,7 @@ func (db Database) Put(collectionName string, data interface{}, token string) (e
 	return db.makeRequest("save", request, token)
 }
 
-func (db Database) Update(collectionName string, criteria interface{}, data interface{}, token string) (error, []byte)  {
+func (db Database) Update(collectionName string, criteria interface{}, data interface{}, token string) (error, []byte) {
 	request := StorageRequest{collection: collectionName, criteria: criteria, data: data}
 	return db.makeRequest("update", request, token)
 }
@@ -71,5 +72,5 @@ func (db Database) makeRequest(method string, request StorageRequest, token stri
 		return jsonErr, []byte("")
 	}
 
-	return saiUtil.Send(db.url + "/" + method, bytes.NewBuffer(jsonStr), token)
+	return saiUtil.Send(db.url+"/"+method, bytes.NewBuffer(jsonStr), token)
 }

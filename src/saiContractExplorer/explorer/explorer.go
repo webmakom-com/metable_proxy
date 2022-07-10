@@ -2,10 +2,11 @@ package explorer
 
 import (
 	"fmt"
-	"github.com/webmakom-com/hv/src/saiContractExplorer/block"
-	"github.com/webmakom-com/hv/src/saiContractExplorer/config"
-	"github.com/webmakom-com/hv/src/saiContractExplorer/utils"
 	"time"
+
+	"github.com/webmakom-com/saiContractExplorer/block"
+	"github.com/webmakom-com/saiContractExplorer/config"
+	"github.com/webmakom-com/saiContractExplorer/utils"
 )
 
 type Explorer struct {
@@ -18,7 +19,7 @@ func NewExplorer(c config.Configuration) Explorer {
 	}
 }
 
-func (e Explorer) Process()  {
+func (e Explorer) Process() {
 	client, err := utils.NewGethClient(e.Config)
 	blockManager := block.NewBlockManager(e.Config)
 

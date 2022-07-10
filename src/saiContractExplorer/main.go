@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/webmakom-com/hv/src/saiContractExplorer/config"
-	"github.com/webmakom-com/hv/src/saiContractExplorer/explorer"
-	"github.com/webmakom-com/hv/src/saiContractExplorer/server"
+	"github.com/webmakom-com/saiContractExplorer/config"
+	"github.com/webmakom-com/saiContractExplorer/explorer"
+	"github.com/webmakom-com/saiContractExplorer/server"
 )
 
-func main()  {
+func main() {
 	cfg := config.Load()
 	srv := server.NewServer(cfg, true)
 	exp := explorer.NewExplorer(cfg)
