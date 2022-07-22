@@ -5,11 +5,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/webmakom-com/saiAuth/config"
 	"github.com/webmakom-com/saiAuth/utils/saiStorageUtil"
 	"go.mongodb.org/mongo-driver/bson"
-	"time"
 )
 
 type AuthManager struct {
