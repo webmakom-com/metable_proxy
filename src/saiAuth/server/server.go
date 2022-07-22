@@ -4,22 +4,28 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/webmakom-com/saiAuth/auth"
+	"io/ioutil"
 	"net"
 	"net/http"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/webmakom-com/saiAuth/config"
+	"github.com/webmakom-com/saiAuth/utils"
 	saiWebSocket "github.com/webmakom-com/saiAuth/websocket"
 	"go.mongodb.org/mongo-driver/bson"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type Server struct {
-	Config    config.Configuration
-	Host      string
-	Port      string
-	Websocket bool
+	Config      config.Configuration
+	Websocket   bool
+	AuthManager auth.AuthManager
 }
 
 type SocketMessage struct {
@@ -35,16 +41,24 @@ var upgrader = websocket.Upgrader{}
 
 func NewServer(c config.Configuration, w bool) Server {
 	return Server{
-		Config:    c,
-		Host:      c.HttpServer.Host,
-		Port:      c.HttpServer.Port,
-		Websocket: w,
+		Config:      c,
+		Websocket:   w,
+		AuthManager: auth.NewAuthManager(c),
 	}
 }
 
 func (s Server) SocketStart() {
-	ln, _ := net.Listen("tcp", s.Config.SocketServer.Port)
-	conn, _ := ln.Accept()
+	ln, nErr := net.Listen("tcp", s.Config.SocketServer.Host+":"+s.Config.SocketServer.Port)
+
+	if nErr != nil {
+		fmt.Println(nErr)
+	}
+
+	conn, cErr := ln.Accept()
+
+	if nErr != nil {
+		fmt.Println(cErr)
+	}
 
 	for {
 		message, _ := bufio.NewReader(conn).ReadString('\n')
@@ -58,17 +72,37 @@ func (s Server) Start() {
 	http.Handle("/", r)
 
 	if s.Websocket {
-		r.HandleFunc("/ws", s.handleWSConnections)
+		r.HandleFunc("/ws/{any}", s.handleWSConnections)
 		ws = saiWebSocket.NewWebSocketManager(s.Config)
 	}
 
 	r.HandleFunc("/{any}", s.handleHttpConnections)
 
 	fmt.Println("Server has been started!")
-	err := http.ListenAndServe(s.Host+":"+s.Port, nil)
+	httpErr := http.ListenAndServe(s.Config.HttpServer.Host+":"+s.Config.HttpServer.Port, nil)
 
-	if err != nil {
-		fmt.Println("Server error: ", err)
+	if httpErr != nil {
+		fmt.Println("Htpp server error: ", httpErr)
+	}
+}
+
+func (s Server) StartHttps() {
+	r := mux.NewRouter()
+	http.Handle("/", r)
+
+	if s.Websocket {
+		r.HandleFunc("/ws/{any}", s.handleWSConnections)
+		ws = saiWebSocket.NewWebSocketManager(s.Config)
+	}
+
+	r.HandleFunc("/{any}", s.handleHttpConnections)
+
+	fmt.Println("Htpps server has been started!")
+
+	httpsErr := http.ListenAndServeTLS(s.Config.HttpsServer.Host+":"+s.Config.HttpsServer.Port, "server.crt", "server.key", nil)
+
+	if httpsErr != nil {
+		fmt.Println("Server error: ", httpsErr)
 	}
 }
 
@@ -93,6 +127,7 @@ func (s Server) handleHttpConnections(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 
 	if err != nil {
+		fmt.Println(err)
 		return
 	}
 
@@ -155,4 +190,68 @@ func (s Server) handleWSConnections(w http.ResponseWriter, r *http.Request) {
 
 		broadcast <- msg
 	}
+}
+
+func (s Server) handleWebSocketRequest(msg []byte) {
+	handlerMessage := new(HandlerRequest)
+	err := json.Unmarshal(msg, handlerMessage)
+
+	if err != nil {
+		fmt.Printf(err.Error())
+		return
+	}
+
+	s.handleServerRequest(*handlerMessage)
+}
+
+func (s Server) handleSocketServerRequest(msg SocketMessage) {
+	handlerMessage := HandlerRequest{
+		Method: msg.Path,
+		Body:   msg.Body,
+	}
+
+	s.handleServerRequest(handlerMessage)
+}
+
+func (s Server) handleHttpServerRequest(w http.ResponseWriter, r *http.Request) {
+	bytes, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	handlerMessage := HandlerRequest{
+		Method: strings.Trim(r.URL.Path, "/"),
+		Body:   bytes,
+	}
+
+	result := s.handleServerRequest(handlerMessage)
+	_, writeErr := w.Write(utils.ConvertInterfaceToJson(result))
+
+	if writeErr != nil {
+		fmt.Println("Write error:", writeErr)
+		return
+	}
+}
+
+func (s Server) handleServerRequest(h HandlerRequest) interface{} {
+	val := reflect.ValueOf(s)
+	in := []reflect.Value{reflect.ValueOf(h)}
+
+	if !val.IsValid() {
+		return "Reflect failed"
+	}
+
+	stringUtil := cases.Title(language.Und)
+	method := val.MethodByName(stringUtil.String(h.Method))
+
+	if !method.IsValid() {
+		return "Method not found"
+	}
+
+	r := method.Call(in)
+
+	return r[0].Interface()
 }

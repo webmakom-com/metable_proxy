@@ -13,5 +13,6 @@ func main() {
 		go srv.SocketStart()
 	}
 
-	srv.Start()
+	srv.StartHttps()
+	//srv.Start()
 }

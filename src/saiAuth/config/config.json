@@ -1,20 +1,25 @@
 {
     "HttpServer": {
         "Host": "0.0.0.0",
-        "Port": "8818"
+        "Port": "8800"
+    },
+    "HttpsServer": {
+        "Host": "0.0.0.0",
+        "Port": "8803"
     },
     "Storage": {
-        "Atlas": false,
-        "User": "",
-        "Pass": "",
-        "Host": "127.0.0.1",
-        "Port": "27017",
-        "Database": "sai"
+        "Token": "12345",
+        "Url": "http://sai-storage:8801",
+        "Auth": {
+            "Email": "admin@saistorage.com",
+            "Password": "123"
+        }
     },
     "SocketServer": {
         "Host": "0.0.0.0",
         "Port": "8000"
     },
+    "Salt": "salt",
     "Token": "12345",
     "Operations": ["registerAddress"],
     "Contract": {
@@ -29,5 +34,29 @@
     "Geth": [
         "http://geth-dev.sator.io:8545"
     ],
-    "Sleep": 20
+    "Sleep": 20,
+    "Roles" : {
+        "Admin": {
+            "Id": 1,
+            "Permissions": {
+                "users": {
+                    "Methods": {
+                        "get": true,
+                        "save": true
+                    }
+                }
+            }
+        },
+        "User": {
+            "Id": 2,
+            "Permissions": {
+                "users": {
+                    "Methods": {
+                        "get": true,
+                        "save": false
+                    }
+                }
+            }
+        }
+    }
 }

@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/webmakom-com/hv/src/saiStorage/config"
-	"github.com/webmakom-com/hv/src/saiStorage/mongo"
-	"github.com/webmakom-com/hv/src/saiStorage/server"
+	"github.com/webmakom-com/saiStorage/config"
+	"github.com/webmakom-com/saiStorage/mongo"
+	"github.com/webmakom-com/saiStorage/server"
 )
 
-func main()  {
+func main() {
 	cfg := config.Load()
 	srv := server.NewServer(cfg, false)
 	mSrv := mongo.NewMongoServer(cfg)
@@ -14,4 +14,5 @@ func main()  {
 	go mSrv.Start()
 
 	srv.Start()
+	//srv.StartHttps()
 }

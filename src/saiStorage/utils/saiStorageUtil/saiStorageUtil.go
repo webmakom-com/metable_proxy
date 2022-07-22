@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/webmakom-com/hv/src/saiStorage/utils/saiUtil"
+
+	"github.com/webmakom-com/saiStorage/utils/saiUtil"
 	"go.mongodb.org/mongo-driver/bson"
 )
 

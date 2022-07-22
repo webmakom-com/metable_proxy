@@ -3,61 +3,32 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-
-	"github.com/webmakom-com/saiAuth/utils"
 )
 
-type HandlerMessage struct {
-	Path string
-	Body []byte
+type HandlerRequest struct {
+	Method string
+	Body   []byte
 }
 
-func (s Server) handleWebSocketRequest(msg []byte) {
-	handlerMessage := new(HandlerMessage)
-	err := json.Unmarshal(msg, handlerMessage)
+func (s Server) Register(h HandlerRequest) interface{} {
+	return s.AuthManager.Register(h.getInterface())
+}
+
+func (s Server) Login(h HandlerRequest) interface{} {
+	return s.AuthManager.Login(h.getInterface())
+}
+
+func (s Server) Access(h HandlerRequest) interface{} {
+	return s.AuthManager.Access(h.getInterface())
+}
+
+func (h HandlerRequest) getInterface() map[string]interface{} {
+	var r = new(map[string]interface{})
+	err := json.Unmarshal(h.Body, r)
 
 	if err != nil {
-		fmt.Printf(err.Error())
-		return
+		fmt.Println(err)
 	}
 
-	s.handleServerRequest(*handlerMessage)
-}
-
-func (s Server) handleSocketServerRequest(msg SocketMessage) {
-	handlerMessage := HandlerMessage{
-		Path: msg.Path,
-		Body: msg.Body,
-	}
-
-	s.handleServerRequest(handlerMessage)
-}
-
-func (s Server) handleHttpServerRequest(w http.ResponseWriter, r *http.Request) {
-	bytes, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-
-	if err != nil {
-		fmt.Printf(err.Error())
-		return
-	}
-
-	handlerMessage := HandlerMessage{
-		Path: r.URL.Path,
-		Body: bytes,
-	}
-
-	result := s.handleServerRequest(handlerMessage)
-	_, writeErr := w.Write(utils.ConvertInterfaceToJson(result))
-
-	if writeErr != nil {
-		fmt.Println("Write error:", writeErr)
-		return
-	}
-}
-
-func (s Server) handleServerRequest(handlerMessage HandlerMessage) interface{} {
-	return nil
+	return *r
 }

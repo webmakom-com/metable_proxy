@@ -11,21 +11,26 @@ type Configuration struct {
 		Host string
 		Port string
 	}
-	Address struct {
-		Url string
-	}
-	SocketServer  struct {
+	HttpsServer struct {
 		Host string
 		Port string
 	}
+	Address struct {
+		Url string
+	}
+	SocketServer struct {
+		Host string
+		Port string
+	}
+	Salt    string
 	Token   string
 	Storage struct {
-		Atlas    bool
-		User     string
-		Pass     string
-		Host     string
-		Port     string
-		Database string
+		Token string
+		Url   string
+		Auth  struct {
+			Email    string
+			Password string
+		}
 	}
 	Operations []string
 	StartBlock int
@@ -39,6 +44,13 @@ type Configuration struct {
 	}
 	Geth  []string
 	Sleep int
+	Roles map[string]struct {
+		Id          int
+		Permissions map[string]struct {
+			Methods  map[string]bool
+			Required map[string]any
+		}
+	}
 }
 
 func Load() Configuration {

@@ -2,23 +2,24 @@ package mongo
 
 import (
 	"context"
-	"github.com/webmakom-com/hv/src/saiStorage/config"
+	"time"
+
+	"github.com/webmakom-com/saiStorage/config"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"time"
 )
 
 type Client struct {
 	Config config.Configuration
-	Host *mongo.Client
-	Ctx context.Context
+	Host   *mongo.Client
+	Ctx    context.Context
 }
 
 type Options struct {
-	Limit int64 `json:"limit"`
-	Skip int64 `json:"skip"`
-	Sort bson.M `json:"sort"`
+	Limit int64  `json:"limit"`
+	Skip  int64  `json:"skip"`
+	Sort  bson.M `json:"sort"`
 }
 
 func NewMongoClient(config config.Configuration) (Client, error) {
@@ -40,15 +41,15 @@ func NewMongoClient(config config.Configuration) (Client, error) {
 	default:
 		{
 			host, hostErr = mongo.Connect(ctx, options.Client().ApplyURI(
-				"mongodb+srv://" + config.Storage.User + ":" + config.Storage.Pass + "@" + config.Storage.Host + "/" + config.Storage.Database + "?ssl=true&authSource=admin&retryWrites=true&w=majority",
+				"mongodb+srv://"+config.Storage.User+":"+config.Storage.Pass+"@"+config.Storage.Host+"/"+config.Storage.Database+"?ssl=true&authSource=admin&retryWrites=true&w=majority",
 			))
 		}
 	}
 
 	client := Client{
-		Ctx: ctx,
+		Ctx:    ctx,
 		Config: config,
-		Host: host,
+		Host:   host,
 	}
 
 	if hostErr != nil {
@@ -58,7 +59,7 @@ func NewMongoClient(config config.Configuration) (Client, error) {
 	return client, nil
 }
 
-func (c Client) GetCollection(collectionName string) *mongo.Collection{
+func (c Client) GetCollection(collectionName string) *mongo.Collection {
 	return c.Host.Database(c.Config.Storage.Database).Collection(collectionName)
 }
 
@@ -96,15 +97,15 @@ func (c Client) Find(collectionName string, selector map[string]interface{}, inp
 	var result []interface{}
 	requestOptions := options.Find()
 
-	if  inputOptions.Sort != nil {
+	if inputOptions.Sort != nil {
 		requestOptions.SetSort(inputOptions.Sort)
 	}
 
-	if  inputOptions.Skip != 0 {
+	if inputOptions.Skip != 0 {
 		requestOptions.SetSkip(inputOptions.Skip)
 	}
 
-	if  inputOptions.Limit != 0 {
+	if inputOptions.Limit != 0 {
 		requestOptions.SetLimit(inputOptions.Limit)
 	}
 
@@ -138,7 +139,8 @@ func (c Client) Find(collectionName string, selector map[string]interface{}, inp
 func (c Client) Insert(collectionName string, doc interface{}) error {
 	collection := c.GetCollection(collectionName)
 
-	_, err := collection.InsertOne(context.TODO(), doc); if err != nil {
+	_, err := collection.InsertOne(context.TODO(), doc);
+	if err != nil {
 		return err
 	}
 
@@ -148,7 +150,8 @@ func (c Client) Insert(collectionName string, doc interface{}) error {
 func (c Client) Update(collectionName string, selector map[string]interface{}, update interface{}) error {
 	collection := c.GetCollection(collectionName)
 
-	_, err := collection.UpdateMany(context.TODO(), selector, update); if err != nil {
+	_, err := collection.UpdateMany(context.TODO(), selector, update);
+	if err != nil {
 		return err
 	}
 
@@ -159,7 +162,8 @@ func (c Client) Upsert(collectionName string, selector map[string]interface{}, u
 	collection := c.GetCollection(collectionName)
 	requestOptions := options.Update().SetUpsert(true)
 
-	_, err := collection.UpdateMany(context.TODO(), selector, update, requestOptions); if err != nil {
+	_, err := collection.UpdateMany(context.TODO(), selector, update, requestOptions);
+	if err != nil {
 		return err
 	}
 
@@ -169,7 +173,8 @@ func (c Client) Upsert(collectionName string, selector map[string]interface{}, u
 func (c Client) Remove(collectionName string, selector map[string]interface{}) error {
 	collection := c.GetCollection(collectionName)
 
-	_, err := collection.DeleteOne(context.TODO(), selector); if err != nil {
+	_, err := collection.DeleteOne(context.TODO(), selector);
+	if err != nil {
 		return err
 	}
 
