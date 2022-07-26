@@ -14,7 +14,7 @@ RUN dpkg-reconfigure locales && apt-get install -y sudo gnupg \
  && apt-get purge -y --auto-remove gnupg \
  && rm -rf /var/lib/apt/lists/*
 
-RUN openssl req -x509 -nodes -newkey rsa:2048 -keyout server.rsa.key -out server.rsa.crt -days 3650 -subj '/CN=localhost'
+RUN openssl req -x509 -nodes -newkey rsa:2048 -keyout server.rsa.key -out server.rsa.crt -days 3650 -subj '/CN=localhost,sai-storage'
 RUN ln -sf server.rsa.key server.key
 RUN ln -sf server.rsa.crt server.crt
 

@@ -9,7 +9,7 @@
     },
     "Storage": {
         "Token": "12345",
-        "Url": "http3://sai-storage:8802",
+        "Url": "http://sai-storage:8801",
         "Auth": {
             "Email": "admin@saistorage.com",
             "Password": "123"

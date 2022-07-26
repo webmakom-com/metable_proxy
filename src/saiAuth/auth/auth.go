@@ -98,11 +98,14 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 		return false
 	}
 
-	for _, role := range users[0]["roles"].([]string) {
-		var perms []map[string]config.Permission
+	roles := users[0]["roles"].([]interface{})
 
-		if am.Config.Roles[role].Exists {
-			perms = append(perms, am.Config.Roles[role].Permissions)
+	for _, role := range roles {
+		var perms []map[string]config.Permission
+		roleName := role.(string)
+
+		if am.Config.Roles[roleName].Exists {
+			perms = append(perms, am.Config.Roles[roleName].Permissions)
 		}
 
 		t := am.createToken(perms)
