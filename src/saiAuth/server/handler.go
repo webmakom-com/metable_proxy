@@ -6,12 +6,13 @@ import (
 )
 
 type HandlerRequest struct {
+	Token  string
 	Method string
 	Body   []byte
 }
 
 func (s Server) Register(h HandlerRequest) interface{} {
-	return s.AuthManager.Register(h.getInterface())
+	return s.AuthManager.Register(h.getInterface(), h.Token)
 }
 
 func (s Server) Login(h HandlerRequest) interface{} {
@@ -19,7 +20,7 @@ func (s Server) Login(h HandlerRequest) interface{} {
 }
 
 func (s Server) Access(h HandlerRequest) interface{} {
-	return s.AuthManager.Access(h.getInterface())
+	return s.AuthManager.Access(h.getInterface(), h.Token)
 }
 
 func (h HandlerRequest) getInterface() map[string]interface{} {

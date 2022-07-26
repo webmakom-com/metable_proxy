@@ -6,6 +6,12 @@ import (
 	"github.com/tkanos/gonfig"
 )
 
+type Permission struct {
+	Exists   bool
+	Methods  map[string]bool
+	Required map[string]any
+}
+
 type Configuration struct {
 	HttpServer struct {
 		Host string
@@ -45,11 +51,8 @@ type Configuration struct {
 	Geth  []string
 	Sleep int
 	Roles map[string]struct {
-		Id          int
-		Permissions map[string]struct {
-			Methods  map[string]bool
-			Required map[string]any
-		}
+		Exists      bool
+		Permissions map[string]Permission
 	}
 }
 

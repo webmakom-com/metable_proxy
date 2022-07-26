@@ -17,7 +17,6 @@ import (
 	"github.com/webmakom-com/saiAuth/config"
 	"github.com/webmakom-com/saiAuth/utils"
 	saiWebSocket "github.com/webmakom-com/saiAuth/websocket"
-	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -25,12 +24,13 @@ import (
 type Server struct {
 	Config      config.Configuration
 	Websocket   bool
-	AuthManager auth.AuthManager
+	AuthManager auth.Manager
 }
 
 type SocketMessage struct {
-	Path string `json:"path"`
-	Body []byte `json:"body"`
+	Path  string `json:"path"`
+	Body  []byte `json:"body"`
+	Token string `json:"token"`
 }
 
 var ws saiWebSocket.Manager
@@ -106,21 +106,6 @@ func (s Server) StartHttps() {
 	}
 }
 
-func (s Server) hasAccess(r *http.Request) bool {
-	headers := r.Header
-	token, ok := headers["Token"]
-
-	if !ok {
-		return false
-	}
-
-	if len(token) > 0 && token[0] == s.Config.Token {
-		return true
-	}
-
-	return false
-}
-
 func (s Server) handleHttpConnections(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
@@ -128,15 +113,6 @@ func (s Server) handleHttpConnections(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		fmt.Println(err)
-		return
-	}
-
-	if !s.hasAccess(r) {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Println("Unauthorized access")
-		message, _ := json.Marshal(bson.M{"message": "Unauthorized access"})
-		_, _ = w.Write(message)
 		return
 	}
 
@@ -208,6 +184,7 @@ func (s Server) handleSocketServerRequest(msg SocketMessage) {
 	handlerMessage := HandlerRequest{
 		Method: msg.Path,
 		Body:   msg.Body,
+		Token:  msg.Token,
 	}
 
 	s.handleServerRequest(handlerMessage)
@@ -222,9 +199,17 @@ func (s Server) handleHttpServerRequest(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	headers := r.Header
+	token, ok := headers["Token"]
+
+	if !ok {
+		return
+	}
+
 	handlerMessage := HandlerRequest{
 		Method: strings.Trim(r.URL.Path, "/"),
 		Body:   bytes,
+		Token:  token[0],
 	}
 
 	result := s.handleServerRequest(handlerMessage)

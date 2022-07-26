@@ -37,9 +37,10 @@
     "Sleep": 20,
     "Roles" : {
         "Admin": {
-            "Id": 1,
+            "Exists": true,
             "Permissions": {
                 "users": {
+                    "Exists": true,
                     "Methods": {
                         "get": true,
                         "save": true
@@ -48,12 +49,20 @@
             }
         },
         "User": {
-            "Id": 2,
+            "Exists": true,
             "Permissions": {
                 "users": {
+                    "Exists": true,
                     "Methods": {
                         "get": true,
                         "save": false
+                    }
+                },
+                "tokens": {
+                    "Exists": true,
+                    "Methods": {
+                        "get": true,
+                        "save": true
                     }
                 }
             }
