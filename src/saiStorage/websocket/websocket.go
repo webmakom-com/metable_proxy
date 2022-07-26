@@ -2,8 +2,9 @@ package websocket
 
 import (
 	"bytes"
-	"github.com/webmakom-com/hv/src/saiStorage/config"
 	"net/http"
+
+	"github.com/webmakom-com/saiStorage/config"
 )
 
 type Manager struct {

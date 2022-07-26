@@ -2,9 +2,10 @@ package mongo
 
 import (
 	"fmt"
-	"github.com/slayer/autorestart"
-	"github.com/webmakom-com/hv/src/saiStorage/config"
 	"os/exec"
+
+	"github.com/slayer/autorestart"
+	"github.com/webmakom-com/saiStorage/config"
 )
 
 type Server struct {
@@ -17,7 +18,7 @@ func NewMongoServer(c config.Configuration) Server {
 	}
 }
 
-func (m Server) Start()  {
+func (m Server) Start() {
 	autorestart.WatchFilename = "/usr/bin/mongod"
 	autorestart.StartWatcher()
 

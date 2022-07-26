@@ -2,9 +2,10 @@ package server
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 var clients = make(map[string]*websocket.Conn)

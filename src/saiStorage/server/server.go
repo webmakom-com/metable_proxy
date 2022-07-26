@@ -3,11 +3,12 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/webmakom-com/hv/src/saiStorage/config"
-	"github.com/webmakom-com/hv/src/saiStorage/websocket"
-	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/webmakom-com/saiStorage/config"
+	"github.com/webmakom-com/saiStorage/websocket"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type Server struct {
@@ -33,6 +34,25 @@ func (s Server) Start() {
 	http.Handle("/", r)
 
 	if s.Websocket {
+		r.HandleFunc("/ws/{any}", s.handleWSConnections)
+		ws = websocket.NewWebSocketManager(s.Config)
+	}
+
+	r.HandleFunc("/{any}", s.handleConnections)
+
+	fmt.Println("Server has been started!")
+	err := http.ListenAndServe(s.Host+":"+s.Port, nil)
+
+	if err != nil {
+		fmt.Println("Server error: ", err)
+	}
+}
+
+func (s Server) StartHttps() {
+	r := mux.NewRouter()
+	http.Handle("/", r)
+
+	if s.Websocket {
 		r.HandleFunc("/ws", s.handleWSConnections)
 		ws = websocket.NewWebSocketManager(s.Config)
 	}
@@ -40,10 +60,11 @@ func (s Server) Start() {
 	r.HandleFunc("/{any}", s.handleConnections)
 
 	fmt.Println("Server has been started!")
-	err := http.ListenAndServe(s.Host + ":" + s.Port, nil)
 
-	if err != nil {
-		fmt.Println("Server error: ", err)
+	httpsErr := http.ListenAndServeTLS(":8802", "server.crt", "server.key", nil)
+
+	if httpsErr != nil {
+		fmt.Println("Server error: ", httpsErr)
 	}
 }
 

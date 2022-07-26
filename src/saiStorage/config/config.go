@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+
 	"github.com/tkanos/gonfig"
 )
 
@@ -18,22 +19,22 @@ type Configuration struct {
 		Atlas    bool
 		User     string
 		Pass     string
-		Host  	 string
-		Port  	 string
+		Host     string
+		Port     string
 		Database string
 	}
 	Operations []string
 	StartBlock int
 	WebSocket  struct {
-		Token 	string
-		Url 	string
+		Token string
+		Url   string
 	}
 	Contract struct {
 		Address string
-		ABI string
+		ABI     string
 	}
-	Geth     []string
-	Sleep    int
+	Geth  []string
+	Sleep int
 }
 
 func Load() Configuration {

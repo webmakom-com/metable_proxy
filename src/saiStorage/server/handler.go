@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/webmakom-com/hv/src/saiContractExplorer/utils"
-	"github.com/webmakom-com/hv/src/saiStorage/mongo"
-	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
+
+	"github.com/webmakom-com/saiStorage/mongo"
+	"github.com/webmakom-com/saiStorage/utils"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (s Server) handleWebSocketRequest(msg []byte) {
@@ -15,10 +16,10 @@ func (s Server) handleWebSocketRequest(msg []byte) {
 }
 
 type jsonRequestType struct {
-	Collection string `json:"collection"`
-	Select bson.M `json:"select"`
-	Options mongo.Options `json:"options"`
-	Data bson.M `json:"data"`
+	Collection string        `json:"collection"`
+	Select     bson.M        `json:"select"`
+	Options    mongo.Options `json:"options"`
+	Data       bson.M        `json:"data"`
 }
 
 func (s Server) handleServerRequest(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +47,7 @@ func (s Server) handleServerRequest(w http.ResponseWriter, r *http.Request) {
 	client.Host.Disconnect(context.Background())
 }
 
-func (s Server) get(client mongo.Client, w http.ResponseWriter, r *http.Request)  {
+func (s Server) get(client mongo.Client, w http.ResponseWriter, r *http.Request) {
 	var request jsonRequestType
 	decoder := json.NewDecoder(r.Body)
 	decoderErr := decoder.Decode(&request)
@@ -71,7 +72,7 @@ func (s Server) get(client mongo.Client, w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (s Server) save(client mongo.Client, w http.ResponseWriter, r *http.Request)  {
+func (s Server) save(client mongo.Client, w http.ResponseWriter, r *http.Request) {
 	var request jsonRequestType
 	decoder := json.NewDecoder(r.Body)
 	decoderErr := decoder.Decode(&request)
@@ -96,7 +97,7 @@ func (s Server) save(client mongo.Client, w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (s Server) update(client mongo.Client, w http.ResponseWriter, r *http.Request)  {
+func (s Server) update(client mongo.Client, w http.ResponseWriter, r *http.Request) {
 	var request jsonRequestType
 	decoder := json.NewDecoder(r.Body)
 	decoderErr := decoder.Decode(&request)
