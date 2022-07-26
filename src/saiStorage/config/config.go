@@ -11,6 +11,10 @@ type Configuration struct {
 		Host string
 		Port string
 	}
+	HttpsServer struct {
+		Host string
+		Port string
+	}
 	Address struct {
 		Url string
 	}

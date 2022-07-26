@@ -13,6 +13,6 @@ func main() {
 
 	go mSrv.Start()
 
-	srv.Start()
-	//srv.StartHttps()
+	//srv.Start()
+	srv.StartHttps()
 }

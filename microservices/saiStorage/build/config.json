@@ -3,6 +3,10 @@
         "Host": "0.0.0.0",
         "Port": "8801"
     },
+    "HttpsServer": {
+        "Host": "0.0.0.0",
+        "Port": "8802"
+    },
     "Storage": {
         "Atlas": false,
         "User": "",

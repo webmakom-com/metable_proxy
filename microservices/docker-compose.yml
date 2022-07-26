@@ -17,10 +17,10 @@ services:
     ports:
       - "8801:8801"
       - "8802:8802"
-#
-#  sai-gn-monitor:
-#    build:
-#      context: ./saiGNMonitor
-#      dockerfile: Dockerfile
-#    ports:
-#      - "8820:8080"
+
+  sai-contract-explorer:
+    build:
+      context: ./saiContractExplorer
+      dockerfile: Dockerfile
+    ports:
+      - "8817:8817"

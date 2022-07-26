@@ -13,8 +13,6 @@ import (
 
 type Server struct {
 	Config    config.Configuration
-	Host      string
-	Port      string
 	Websocket bool
 }
 
@@ -23,8 +21,6 @@ var ws websocket.Manager
 func NewServer(c config.Configuration, w bool) Server {
 	return Server{
 		Config:    c,
-		Host:      c.HttpServer.Host,
-		Port:      c.HttpServer.Port,
 		Websocket: w,
 	}
 }
@@ -41,7 +37,7 @@ func (s Server) Start() {
 	r.HandleFunc("/{any}", s.handleConnections)
 
 	fmt.Println("Server has been started!")
-	err := http.ListenAndServe(s.Host+":"+s.Port, nil)
+	err := http.ListenAndServe(s.Config.HttpServer.Host+":"+s.Config.HttpServer.Port, nil)
 
 	if err != nil {
 		fmt.Println("Server error: ", err)
@@ -61,7 +57,7 @@ func (s Server) StartHttps() {
 
 	fmt.Println("Server has been started!")
 
-	httpsErr := http.ListenAndServeTLS(":8802", "server.crt", "server.key", nil)
+	httpsErr := http.ListenAndServeTLS(s.Config.HttpsServer.Host+":"+s.Config.HttpsServer.Port, "server.crt", "server.key", nil)
 
 	if httpsErr != nil {
 		fmt.Println("Server error: ", httpsErr)

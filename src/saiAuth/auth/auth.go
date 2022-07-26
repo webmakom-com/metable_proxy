@@ -187,7 +187,7 @@ func (am Manager) createToken(permissions []map[string]config.Permission) *Token
 }
 
 func (am Manager) isAuthRequestWrong(r map[string]interface{}) bool {
-	return r["name"] == nil || r["password"] == nil
+	return r["password"] == nil
 }
 
 func (am Manager) isAccessRequestWrong(r map[string]interface{}) bool {
