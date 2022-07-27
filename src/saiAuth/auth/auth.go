@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -108,7 +110,7 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 			perms = append(perms, am.Config.Roles[roleName].Permissions)
 		}
 
-		t := am.createToken(perms)
+		t := am.createToken(perms, users[0])
 
 		if t == nil {
 			return false
@@ -169,14 +171,33 @@ func (am Manager) createPass(pass string) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func (am Manager) createToken(permissions []map[string]config.Permission) *Token {
+func (am Manager) replacePlaceholders(permissions []map[string]config.Permission, object map[string]interface{}) []map[string]config.Permission {
+	permstring, err := json.Marshal(permissions)
+
+	if err != nil {
+		return permissions
+	}
+
+	if strings.Contains(string(permstring), "$") {
+		var re = regexp.MustCompile(`^(.+\")(.*)(\":\")(\$)(\".+)$`)
+		s := re.ReplaceAllString(string(permstring), `$1$2$3test`)
+		s2 := re.MatchString(string(permstring))
+		fmt.Println(s2)
+		fmt.Println(string(permstring))
+		fmt.Println(s)
+	}
+
+	return permissions
+}
+
+func (am Manager) createToken(permissions []map[string]config.Permission, object map[string]interface{}) *Token {
 	var t = new(Token)
 
 	hasher := sha256.New()
 	hasher.Write(uuid.New().NodeID())
 	hasher.Write([]byte(time.Now().String()))
 	t.Name = hex.EncodeToString(hasher.Sum(nil))
-	t.Permissions = permissions
+	t.Permissions = am.replacePlaceholders(permissions, object)
 	t.Expiration = time.Now().Unix() + 3600
 
 	tokenErr, _ := am.Database.Put("tokens", t, am.Config.Token)

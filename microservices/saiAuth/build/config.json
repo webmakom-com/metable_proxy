@@ -55,7 +55,10 @@
                     "Exists": true,
                     "Methods": {
                         "get": true,
-                        "save": false
+                        "save": true
+                    },
+                    "Required": {
+                        "_id": "$"
                     }
                 },
                 "tokens": {
