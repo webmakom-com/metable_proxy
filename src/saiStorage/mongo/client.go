@@ -2,6 +2,8 @@ package mongo
 
 import (
 	"context"
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
 
 	"github.com/webmakom-com/saiStorage/config"
@@ -66,6 +68,7 @@ func (c Client) GetCollection(collectionName string) *mongo.Collection {
 func (c Client) FindOne(collectionName string, selector map[string]interface{}) (map[string]interface{}, error) {
 	var result map[string]interface{}
 	collection := c.GetCollection(collectionName)
+	selector = c.preprocessSelector(selector)
 	cur, err := collection.Find(context.TODO(), selector)
 
 	if err != nil {
@@ -110,6 +113,7 @@ func (c Client) Find(collectionName string, selector map[string]interface{}, inp
 	}
 
 	collection := c.GetCollection(collectionName)
+	selector = c.preprocessSelector(selector)
 	cur, err := collection.Find(context.TODO(), selector, requestOptions)
 
 	if err != nil {
@@ -139,7 +143,7 @@ func (c Client) Find(collectionName string, selector map[string]interface{}, inp
 func (c Client) Insert(collectionName string, doc interface{}) error {
 	collection := c.GetCollection(collectionName)
 
-	_, err := collection.InsertOne(context.TODO(), doc);
+	_, err := collection.InsertOne(context.TODO(), doc)
 	if err != nil {
 		return err
 	}
@@ -150,7 +154,7 @@ func (c Client) Insert(collectionName string, doc interface{}) error {
 func (c Client) Update(collectionName string, selector map[string]interface{}, update interface{}) error {
 	collection := c.GetCollection(collectionName)
 
-	_, err := collection.UpdateMany(context.TODO(), selector, update);
+	_, err := collection.UpdateMany(context.TODO(), selector, update)
 	if err != nil {
 		return err
 	}
@@ -162,7 +166,7 @@ func (c Client) Upsert(collectionName string, selector map[string]interface{}, u
 	collection := c.GetCollection(collectionName)
 	requestOptions := options.Update().SetUpsert(true)
 
-	_, err := collection.UpdateMany(context.TODO(), selector, update, requestOptions);
+	_, err := collection.UpdateMany(context.TODO(), selector, update, requestOptions)
 	if err != nil {
 		return err
 	}
@@ -173,10 +177,25 @@ func (c Client) Upsert(collectionName string, selector map[string]interface{}, u
 func (c Client) Remove(collectionName string, selector map[string]interface{}) error {
 	collection := c.GetCollection(collectionName)
 
-	_, err := collection.DeleteOne(context.TODO(), selector);
+	_, err := collection.DeleteOne(context.TODO(), selector)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (c Client) preprocessSelector(selector map[string]interface{}) map[string]interface{} {
+	if selector["_id"] != nil {
+		objID, err := primitive.ObjectIDFromHex(selector["_id"].(string))
+
+		if err != nil {
+			fmt.Println("Wrong objectId string")
+			return selector
+		}
+
+		selector["_id"] = objID
+	}
+
+	return selector
 }
