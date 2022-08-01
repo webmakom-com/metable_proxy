@@ -42,6 +42,10 @@ func (s Server) handleServerRequest(w http.ResponseWriter, r *http.Request) {
 		{
 			s.update(client, w, r)
 		}
+	case "/remove":
+		{
+			s.remove(client, w, r)
+		}
 	}
 
 	client.Host.Disconnect(context.Background())
@@ -108,6 +112,31 @@ func (s Server) update(client mongo.Client, w http.ResponseWriter, r *http.Reque
 	}
 
 	mongoErr := client.Update(request.Collection, request.Select, bson.M{"$set": request.Data})
+
+	if mongoErr != nil {
+		fmt.Println("Mongo error:", mongoErr)
+		return
+	}
+
+	_, writeErr := w.Write(utils.ConvertInterfaceToJson(bson.M{"Status": "Ok"}))
+
+	if writeErr != nil {
+		fmt.Println("Write error:", writeErr)
+		return
+	}
+}
+
+func (s Server) remove(client mongo.Client, w http.ResponseWriter, r *http.Request) {
+	var request jsonRequestType
+	decoder := json.NewDecoder(r.Body)
+	decoderErr := decoder.Decode(&request)
+
+	if decoderErr != nil {
+		fmt.Printf("Wrong JSON: %v", decoderErr)
+		return
+	}
+
+	mongoErr := client.Remove(request.Collection, request.Select)
 
 	if mongoErr != nil {
 		fmt.Println("Mongo error:", mongoErr)

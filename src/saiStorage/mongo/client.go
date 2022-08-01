@@ -153,6 +153,7 @@ func (c Client) Insert(collectionName string, doc interface{}) error {
 
 func (c Client) Update(collectionName string, selector map[string]interface{}, update interface{}) error {
 	collection := c.GetCollection(collectionName)
+	selector = c.preprocessSelector(selector)
 
 	_, err := collection.UpdateMany(context.TODO(), selector, update)
 	if err != nil {
@@ -165,6 +166,7 @@ func (c Client) Update(collectionName string, selector map[string]interface{}, u
 func (c Client) Upsert(collectionName string, selector map[string]interface{}, update interface{}) error {
 	collection := c.GetCollection(collectionName)
 	requestOptions := options.Update().SetUpsert(true)
+	selector = c.preprocessSelector(selector)
 
 	_, err := collection.UpdateMany(context.TODO(), selector, update, requestOptions)
 	if err != nil {
@@ -176,6 +178,7 @@ func (c Client) Upsert(collectionName string, selector map[string]interface{}, u
 
 func (c Client) Remove(collectionName string, selector map[string]interface{}) error {
 	collection := c.GetCollection(collectionName)
+	selector = c.preprocessSelector(selector)
 
 	_, err := collection.DeleteOne(context.TODO(), selector)
 	if err != nil {
