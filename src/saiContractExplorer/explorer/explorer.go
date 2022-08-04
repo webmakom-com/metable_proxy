@@ -1,7 +1,7 @@
 package explorer
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/webmakom-com/saiContractExplorer/block"
@@ -19,6 +19,51 @@ func NewExplorer(c config.Configuration) Explorer {
 	}
 }
 
+func (e Explorer) WProcess() {
+	blockManager := block.NewBlockManager(e.Config)
+
+	for {
+		bid, err := blockManager.EthBlockNumber()
+
+		if err != nil {
+			log.Println("Can't get last block:", err)
+			continue
+		}
+
+		log.Println("Bid:", bid)
+
+		blk, err := blockManager.GetLastBlock(bid)
+
+		if err != nil {
+			log.Println("Can't get last block:", err)
+			continue
+		}
+
+		for i := blk.Id; i <= bid; i++ {
+			blkInfo, blockInfoErr := blockManager.EthGetBlockByNumber(i, true)
+
+			if blockInfoErr != nil {
+				log.Println("Can't get block data!! ")
+				i--
+				continue
+			}
+
+			if len(blkInfo.Transactions) == 0 {
+				log.Printf("Block %d from %d: No transactions found.\n", i, bid)
+				continue
+			}
+
+			log.Printf("Block %d from %d: %d transactions found.\n", i, bid, len(blkInfo.Transactions))
+
+			blockManager.HandleTransactions(blkInfo.Transactions)
+		}
+
+		blk.Id = bid
+		blockManager.SetLastBlock(blk)
+		time.Sleep(time.Duration(e.Config.Sleep) * time.Second)
+	}
+}
+
 func (e Explorer) Process() {
 	client, err := utils.NewGethClient(e.Config)
 	blockManager := block.NewBlockManager(e.Config)
@@ -31,14 +76,14 @@ func (e Explorer) Process() {
 		bid, err := client.EthBlockNumber()
 
 		if err != nil {
-			fmt.Println("Can't get last block:", err)
+			log.Println("Can't get last block:", err)
 			continue
 		}
 
 		blk, err := blockManager.GetLastBlock(bid)
 
 		if err != nil {
-			fmt.Println("Can't get last block:", err)
+			log.Println("Can't get last block:", err)
 			continue
 		}
 
@@ -46,17 +91,17 @@ func (e Explorer) Process() {
 			blkInfo, blockInfoErr := client.EthGetBlockByNumber(i, true)
 
 			if blockInfoErr != nil {
-				fmt.Println("Can't get block data!! ")
+				log.Println("Can't get block data!! ")
 				i--
 				continue
 			}
 
 			if len(blkInfo.Transactions) == 0 {
-				fmt.Printf("Block %d from %d: No transactions found.\n", i, bid)
+				log.Printf("Block %d from %d: No transactions found.\n", i, bid)
 				continue
 			}
 
-			fmt.Printf("Block %d from %d: %d transactions found.\n", i, bid, len(blkInfo.Transactions))
+			log.Printf("Block %d from %d: %d transactions found.\n", i, bid, len(blkInfo.Transactions))
 
 			blockManager.HandleTransactions(blkInfo.Transactions)
 		}

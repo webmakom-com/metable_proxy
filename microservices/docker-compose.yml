@@ -1,16 +1,16 @@
 version: '3'
 services:
 
-  sai-eth-manager:
+  sai-storage:
     build:
-      context: ./saiEthManager
+      context: ./saiStorage
       dockerfile: Dockerfile
     ports:
-      - "8819:8080"
+      - "8818:8818"
 
-  sai-gn-monitor:
+  sai-contract-explorer:
     build:
-      context: ./saiGNMonitor
+      context: ./saiContractExplorer
       dockerfile: Dockerfile
     ports:
-      - "8820:8080"
+      - "8817:8817"

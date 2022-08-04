@@ -1,7 +1,7 @@
 package server
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -32,7 +32,7 @@ func (s Server) Start() {
 	err := http.ListenAndServe(s.Host+":"+s.Port, nil)
 
 	if err != nil {
-		fmt.Println("Server error: ", err)
+		log.Println("Server error: ", err)
 	}
 }
 

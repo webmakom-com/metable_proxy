@@ -1,7 +1,7 @@
 package server
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -36,14 +36,14 @@ func (s Server) handleWSConnections(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
 	defer func(ws *websocket.Conn) {
 		cErr := ws.Close()
 
 		if cErr != nil {
-			fmt.Println(cErr)
+			log.Println(cErr)
 		}
 	}(ws)
 

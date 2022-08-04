@@ -24,9 +24,20 @@
         "Token": "hv",
         "Url": "http://sai-websocket:8820"
     },
-    "StartBlock": 10007696,
-    "Geth": [
-        "http://geth-dev.sator.io:8545"
-    ],
+    "StartBlock": 11138201,
+    "Geth": {
+        "Web": {
+            "Enabled": true,
+            "Addresses": [
+                "https://rpc.ankr.com/eth_rinkeby"
+            ],
+        },
+        "Socket": {
+            "Enabled":false,
+            "Addresses": [
+                "http://geth-dev.sator.io:8545"
+            ]
+        }
+    },
     "Sleep": 20
 }

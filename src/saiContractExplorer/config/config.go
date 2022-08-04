@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/tkanos/gonfig"
 )
@@ -34,7 +34,16 @@ type Configuration struct {
 		}
 		Operations []string
 	}
-	Geth  []string
+	Geth struct {
+		Web struct {
+			Enabled   bool
+			Addresses []string
+		}
+		Socket struct {
+			Enabled   bool
+			Addresses []string
+		}
+	}
 	Sleep int
 }
 
@@ -43,7 +52,7 @@ func Load() Configuration {
 	err := gonfig.GetConf("config.json", &config)
 
 	if err != nil {
-		fmt.Println("Configuration problem:", err)
+		log.Println("Configuration problem:", err)
 		panic(err)
 	}
 
