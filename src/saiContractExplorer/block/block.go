@@ -29,8 +29,12 @@ type BlockResult struct {
 	Result string
 }
 
-type BlockInfo struct {
+type BlockData struct {
 	Transactions []ethrpc.Transaction
+}
+
+type BlockInfo struct {
+	Result BlockData
 }
 
 type Block struct {
@@ -131,6 +135,7 @@ func (m Manager) HandleTransactions(trs []ethrpc.Transaction) {
 
 			if methodErr != nil {
 				log.Println("Get method error:", methodErr)
+				log.Println("ABI:", m.abis[contract.Data.Address])
 				continue
 			}
 
@@ -206,9 +211,7 @@ func (m Manager) EthBlockNumber() (int, error) {
 	return int(n), nil
 }
 
-func (m Manager) EthGetBlockByNumber(i int, full bool) (BlockInfo, error) {
-	bid := "0x" + strconv.FormatInt(int64(i), 16)
-
+func (m Manager) EthGetBlockByNumber(bid int, full bool) (BlockData, error) {
 	data := bson.M{
 		"jsonrpc": "2.0",
 		"method":  "eth_getBlockByNumber",
@@ -236,5 +239,5 @@ func (m Manager) EthGetBlockByNumber(i int, full bool) (BlockInfo, error) {
 		log.Println("Wrong answer format from the geth: ", jsonErr)
 	}
 
-	return answer, nil
+	return answer.Result, nil
 }

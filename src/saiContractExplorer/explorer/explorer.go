@@ -30,8 +30,6 @@ func (e Explorer) WProcess() {
 			continue
 		}
 
-		log.Println("Bid:", bid)
-
 		blk, err := blockManager.GetLastBlock(bid)
 
 		if err != nil {
