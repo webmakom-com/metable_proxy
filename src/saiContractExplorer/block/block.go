@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -66,45 +68,52 @@ func NewBlockManager(c config.Configuration) Manager {
 }
 
 func (m Manager) GetLastBlock(id int) (Block, error) {
-	var blocks []Block
-	err, resultJsonString := m.storage.Get("last_block", bson.M{}, bson.M{}, m.config.Storage.Token)
+	block := Block{Id: id}
+	pwd, err := os.Getwd()
 
 	if err != nil {
-		return Block{
-			Id: id,
-		}, nil
+		log.Println("Can't read current directory:", err)
+		return block, nil
 	}
 
-	err = json.Unmarshal(resultJsonString, &blocks)
+	data, err := ioutil.ReadFile(pwd + "/block.data")
 
 	if err != nil {
-		return Block{
-			Id: id,
-		}, nil
+		log.Println("Can't open file:", err)
+		return block, nil
 	}
 
-	if len(blocks) > 0 {
-		startBlock = blocks[0].Id + 1
+	lastBlock, strErr := strconv.Atoi(string(data))
+
+	if strErr != nil {
+		log.Println("Data from file can't be converted to int:", err)
+		return block, nil
+	}
+
+	if lastBlock > 0 {
+		startBlock = lastBlock + 1
 	} else if m.config.StartBlock > 0 {
 		startBlock = m.config.StartBlock
 	} else {
 		startBlock = id
 	}
 
-	return Block{
-		Id: startBlock,
-	}, nil
+	return Block{Id: startBlock}, nil
 }
 
 func (m Manager) SetLastBlock(blk Block) {
-	var blocks []Block
-	_, resultJsonString := m.storage.Get("last_block", bson.M{}, bson.M{}, m.config.Storage.Token)
-	_ = json.Unmarshal(resultJsonString, &blocks)
+	pwd, dirErr := os.Getwd()
 
-	if len(blocks) > 0 {
-		_, _ = m.storage.Update("last_block", bson.M{"id": bson.M{"$exists": true}}, blk, m.config.Storage.Token)
-	} else {
-		_, _ = m.storage.Put("last_block", blk, m.config.Storage.Token)
+	if dirErr != nil {
+		log.Println("Can't read current directory:", dirErr)
+		return
+	}
+
+	lastBlock := strconv.Itoa(blk.Id)
+	writeErr := ioutil.WriteFile(pwd+"/block.data", []byte(lastBlock), 0777)
+
+	if writeErr != nil {
+		log.Println("Can't write file:", writeErr)
 	}
 }
 
