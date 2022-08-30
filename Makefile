@@ -23,11 +23,23 @@ service:
 docker:
 	docker-compose -f ./microservices/docker-compose.yml up -d --build
 
-logs:
+log:
 	docker-compose -f ./microservices/docker-compose.yml logs -f
 
-logn:
+loga:
 	docker-compose -f ./microservices/docker-compose.yml logs -f sai-auth
 
-sh:
+logs:
+	docker-compose -f ./microservices/docker-compose.yml logs -f sai-storage
+
+logc:
+	docker-compose -f ./microservices/docker-compose.yml logs -f sai-contract-explorer
+
+sha:
 	docker-compose -f ./microservices/docker-compose.yml run --rm sai-auth sh
+
+shs:
+	docker-compose -f ./microservices/docker-compose.yml run --rm sai-storage sh
+
+shc:
+	docker-compose -f ./microservices/docker-compose.yml run --rm sai-contract-explorer sh
