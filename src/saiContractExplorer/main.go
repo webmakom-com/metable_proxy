@@ -12,7 +12,14 @@ func main() {
 	exp := explorer.NewExplorer(cfg)
 
 	go srv.WSProcess()
-	go exp.Process()
+
+	if cfg.Geth.Socket.Enabled {
+		go exp.Process()
+	}
+
+	if cfg.Geth.Web.Enabled {
+		go exp.WProcess()
+	}
 
 	srv.Start()
 }

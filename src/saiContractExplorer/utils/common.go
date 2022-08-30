@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"encoding/json"
 	"reflect"
 )
 
@@ -17,9 +16,4 @@ func InArray(val interface{}, array interface{}) (index int) {
 	}
 
 	return -1
-}
-
-func ConvertInterfaceToJson(obj interface{}) []byte {
-	jsonResult, _ := json.Marshal(obj)
-	return jsonResult
 }
