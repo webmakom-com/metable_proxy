@@ -3,8 +3,9 @@ package mongo
 import (
 	"context"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/webmakom-com/saiStorage/config"
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,10 +19,16 @@ type Client struct {
 	Ctx    context.Context
 }
 
+type FindResult struct {
+	Count  int64         `json:"count,omitempty"`
+	Result []interface{} `json:"result,omitempty"`
+}
+
 type Options struct {
 	Limit int64  `json:"limit"`
 	Skip  int64  `json:"skip"`
 	Sort  bson.M `json:"sort"`
+	Count int64  `json:"count"`
 }
 
 func NewMongoClient(config config.Configuration) (Client, error) {
@@ -96,9 +103,21 @@ func (c Client) FindOne(collectionName string, selector map[string]interface{}) 
 	return result, nil
 }
 
-func (c Client) Find(collectionName string, selector map[string]interface{}, inputOptions Options) ([]interface{}, error) {
-	var result []interface{}
+func (c Client) Find(collectionName string, selector map[string]interface{}, inputOptions Options) (*FindResult, error) {
+	findResult := &FindResult{}
 	requestOptions := options.Find()
+
+	if inputOptions.Count != 0 {
+		collection := c.GetCollection(collectionName)
+		selector = c.preprocessSelector(selector)
+		count, err := collection.CountDocuments(context.TODO(), selector)
+		if err != nil {
+			return &FindResult{}, err
+		}
+		return &FindResult{
+			Count: count,
+		}, nil
+	}
 
 	if inputOptions.Sort != nil {
 		requestOptions.SetSort(inputOptions.Sort)
@@ -114,10 +133,11 @@ func (c Client) Find(collectionName string, selector map[string]interface{}, inp
 
 	collection := c.GetCollection(collectionName)
 	selector = c.preprocessSelector(selector)
+
 	cur, err := collection.Find(context.TODO(), selector, requestOptions)
 
 	if err != nil {
-		return result, err
+		return &FindResult{}, err
 	}
 
 	defer cur.Close(context.TODO())
@@ -127,17 +147,17 @@ func (c Client) Find(collectionName string, selector map[string]interface{}, inp
 		decodeErr := cur.Decode(&elem)
 
 		if decodeErr != nil {
-			return result, decodeErr
+			return &FindResult{}, decodeErr
 		}
 
-		result = append(result, elem)
+		findResult.Result = append(findResult.Result, elem)
 	}
 
 	if cursorErr := cur.Err(); cursorErr != nil {
-		return result, cursorErr
+		return findResult, cursorErr
 	}
 
-	return result, nil
+	return findResult, nil
 }
 
 func (c Client) Insert(collectionName string, doc interface{}) error {
