@@ -27,6 +27,11 @@ type Token struct {
 	Expiration  int64
 }
 
+type FindResult struct {
+	Count int64                    `json:"count,omitempty"`
+	Users []map[string]interface{} `json:"result,omitempty"`
+}
+
 func NewAuthManager(c config.Configuration) Manager {
 	return Manager{
 		Config:   c,
@@ -72,7 +77,10 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 		return false
 	}
 
-	var users []map[string]interface{}
+	var (
+		wrappedResult map[string]interface{}
+		users         []map[string]interface{}
+	)
 
 	r["password"] = am.createPass(r["password"].(string))
 	err, result := am.Database.Get("users", r, bson.M{}, am.Config.Token)
@@ -82,7 +90,23 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 		return false
 	}
 
-	jsonErr := json.Unmarshal(result, &users)
+	jsonErr := json.Unmarshal(result, &wrappedResult)
+
+	if jsonErr != nil {
+		fmt.Println(string(result))
+		fmt.Println(jsonErr)
+		return false
+	}
+
+	usersMarshalled, err := json.Marshal(wrappedResult["result"])
+
+	if err != nil {
+		fmt.Println(string(usersMarshalled))
+		fmt.Println(err)
+		return false
+	}
+
+	jsonErr = json.Unmarshal(usersMarshalled, &users)
 
 	if jsonErr != nil {
 		fmt.Println(string(result))
@@ -138,10 +162,28 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		fmt.Println(err)
 		return false
 	}
+	var (
+		wrappedResult map[string]interface{}
+		tokens        []Token
+	)
 
-	var tokens []Token
+	jsonErr := json.Unmarshal(result, &wrappedResult)
 
-	jsonErr := json.Unmarshal(result, &tokens)
+	if jsonErr != nil {
+		fmt.Println(string(result))
+		fmt.Println(jsonErr)
+		return false
+	}
+
+	tokensMarshalled, err := json.Marshal(wrappedResult["result"])
+
+	if err != nil {
+		fmt.Println(string(tokensMarshalled))
+		fmt.Println(err)
+		return false
+	}
+
+	jsonErr = json.Unmarshal(tokensMarshalled, &tokens)
 
 	if jsonErr != nil {
 		fmt.Println(jsonErr)
@@ -220,11 +262,27 @@ func (am Manager) isAccessRequestWrong(r map[string]interface{}) bool {
 
 func (am Manager) isUserExists(r map[string]interface{}) bool {
 	err, result := am.Database.Get("auth", bson.M{"name": r["name"]}, bson.M{}, am.Config.Token)
-
 	if err != nil {
 		fmt.Println(err)
 		return true
 	}
 
-	return string(result) != "null"
+	var wrappedResult map[string]interface{}
+
+	jsonErr := json.Unmarshal(result, &wrappedResult)
+	if jsonErr != nil {
+		fmt.Println(string(result))
+		fmt.Println(jsonErr)
+		return false
+	}
+
+	resultMarshalled, err := json.Marshal(wrappedResult["result"])
+
+	if err != nil {
+		fmt.Println(string(resultMarshalled))
+		fmt.Println(err)
+		return false
+	}
+
+	return string(resultMarshalled) != "null"
 }
