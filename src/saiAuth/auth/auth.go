@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
@@ -15,6 +14,16 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/exp/slices"
 )
+
+const (
+	placeholder = "$"
+)
+
+// struct for replacePlaceholders func
+type outerObject struct {
+	Key   string
+	Value string
+}
 
 type Manager struct {
 	Config   config.Configuration
@@ -214,21 +223,41 @@ func (am Manager) createPass(pass string) string {
 }
 
 func (am Manager) replacePlaceholders(permissions []map[string]config.Permission, object map[string]interface{}) []map[string]config.Permission {
-	permstring, err := json.Marshal(permissions)
+	var outerObjects []*outerObject
+	permBytes, err := json.Marshal(permissions)
 
 	if err != nil {
 		return permissions
 	}
 
-	if strings.Contains(string(permstring), "$") {
-		var re = regexp.MustCompile(`^(.+\")(.*)(\":\")(\$)(\".+)$`)
-		s := re.ReplaceAllString(string(permstring), `$1$2$3test`)
-		s2 := re.MatchString(string(permstring))
-		fmt.Println(s2)
-		fmt.Println(string(permstring))
-		fmt.Println(s)
+	keys := findPlaceholders(permBytes)
+
+	for k, v := range object {
+		for _, key := range keys {
+			if k == key {
+				obj := &outerObject{
+					Key:   key,
+					Value: v.(string), // suppose that values to replace placeholders of string type
+				}
+				outerObjects = append(outerObjects, obj)
+			}
+		}
 	}
 
+	for _, permMap := range permissions {
+		for _, permission := range permMap {
+			for reqKey, reqValue := range permission.Required {
+				for _, object := range outerObjects {
+					if reqKey == object.Key {
+						if reqValue == placeholder {
+							permission.Required[reqKey] = object.Value
+						}
+					}
+				}
+			}
+		}
+
+	}
 	return permissions
 }
 
@@ -285,4 +314,26 @@ func (am Manager) isUserExists(r map[string]interface{}) bool {
 	}
 
 	return string(resultMarshalled) != "null"
+}
+
+func findPlaceholders(permBytes []byte) (keys []string) {
+	slice := strings.Split(string(permBytes), ",")
+	for _, s1 := range slice {
+		if strings.Contains(s1, placeholder) {
+			s2 := strings.Split(s1, ":")
+			if len(s2) == 2 {
+				uncroppedKey := s2[0]
+				key := strings.Trim(uncroppedKey, "\"")
+				keys = append(keys, key)
+
+			} else {
+				uncroppedKey := s2[len(s2)-2]
+				key := strings.Trim(uncroppedKey, "{")
+				key = strings.Trim(key, "\"")
+				keys = append(keys, key)
+			}
+		}
+
+	}
+	return keys
 }
