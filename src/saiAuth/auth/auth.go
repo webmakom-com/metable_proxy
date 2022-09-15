@@ -41,6 +41,10 @@ type FindResult struct {
 	Users []map[string]interface{} `json:"result,omitempty"`
 }
 
+type LoginResult struct {
+	Token string `json:"token"`
+}
+
 func NewAuthManager(c config.Configuration) Manager {
 	return Manager{
 		Config:   c,
@@ -122,6 +126,7 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 		fmt.Println(jsonErr)
 		return false
 	}
+	fmt.Println(users) //debug
 
 	if len(users) == 0 {
 		fmt.Println("Missing user")
