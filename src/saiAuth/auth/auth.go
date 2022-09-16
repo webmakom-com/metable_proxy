@@ -154,6 +154,8 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 			return false
 		}
 
+		delete(users[0], "password")
+
 		return &LoginResult{
 			Token: t.Name,
 			User:  users[0],
