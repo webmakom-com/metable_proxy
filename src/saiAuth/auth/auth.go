@@ -41,6 +41,11 @@ type FindResult struct {
 	Users []map[string]interface{} `json:"result,omitempty"`
 }
 
+type LoginResult struct {
+	Token string `json:"token"`
+	User  map[string]interface{}
+}
+
 func NewAuthManager(c config.Configuration) Manager {
 	return Manager{
 		Config:   c,
@@ -149,7 +154,12 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 			return false
 		}
 
-		return t.Name
+		delete(users[0], "password")
+
+		return &LoginResult{
+			Token: t.Name,
+			User:  users[0],
+		}
 	}
 
 	return false
