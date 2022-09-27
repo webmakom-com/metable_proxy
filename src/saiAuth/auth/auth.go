@@ -1,11 +1,12 @@
 package auth
 
 import (
+	"bytes"
 	"crypto/sha256"
+	"encoding/gob"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,12 +19,6 @@ import (
 const (
 	placeholder = "$"
 )
-
-// struct for replacePlaceholders func
-type outerObject struct {
-	Key   string
-	Value string
-}
 
 type Manager struct {
 	Config   config.Configuration
@@ -140,29 +135,35 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 
 	roles := users[0]["roles"].([]interface{})
 
+	var perms []map[string]config.Permission
+
 	for _, role := range roles {
-		var perms []map[string]config.Permission
 		roleName := role.(string)
 
 		if am.Config.Roles[roleName].Exists {
-			perms = append(perms, am.Config.Roles[roleName].Permissions)
-		}
+			rolePerm, mapErr := Map(am.Config.Roles[roleName].Permissions)
 
-		t := am.createToken(perms, users[0])
+			if mapErr != nil {
+				fmt.Println(mapErr)
+				return false
+			}
 
-		if t == nil {
-			return false
-		}
-
-		delete(users[0], "password")
-
-		return &LoginResult{
-			Token: t.Name,
-			User:  users[0],
+			perms = append(perms, rolePerm)
 		}
 	}
 
-	return false
+	t := am.createToken(perms, users[0])
+
+	if t == nil {
+		return false
+	}
+
+	delete(users[0], "password")
+
+	return &LoginResult{
+		Token: t.Name,
+		User:  users[0],
+	}
 }
 
 func (am Manager) Access(r map[string]interface{}, t string) interface{} {
@@ -233,41 +234,18 @@ func (am Manager) createPass(pass string) string {
 }
 
 func (am Manager) replacePlaceholders(permissions []map[string]config.Permission, object map[string]interface{}) []map[string]config.Permission {
-	var outerObjects []*outerObject
-	permBytes, err := json.Marshal(permissions)
-
-	if err != nil {
-		return permissions
-	}
-
-	keys := findPlaceholders(permBytes)
-
-	for k, v := range object {
-		for _, key := range keys {
-			if k == key {
-				obj := &outerObject{
-					Key:   key,
-					Value: v.(string), // suppose that values to replace placeholders of string type
-				}
-				outerObjects = append(outerObjects, obj)
-			}
-		}
-	}
-
 	for _, permMap := range permissions {
 		for _, permission := range permMap {
 			for reqKey, reqValue := range permission.Required {
-				for _, object := range outerObjects {
-					if reqKey == object.Key {
-						if reqValue == placeholder {
-							permission.Required[reqKey] = object.Value
-						}
+				for k, v := range object {
+					if reqKey == k && reqValue == placeholder {
+						permission.Required[reqKey] = v
 					}
 				}
 			}
 		}
-
 	}
+
 	return permissions
 }
 
@@ -326,24 +304,18 @@ func (am Manager) isUserExists(r map[string]interface{}) bool {
 	return string(resultMarshalled) != "null"
 }
 
-func findPlaceholders(permBytes []byte) (keys []string) {
-	slice := strings.Split(string(permBytes), ",")
-	for _, s1 := range slice {
-		if strings.Contains(s1, placeholder) {
-			s2 := strings.Split(s1, ":")
-			if len(s2) == 2 {
-				uncroppedKey := s2[0]
-				key := strings.Trim(uncroppedKey, "\"")
-				keys = append(keys, key)
-
-			} else {
-				uncroppedKey := s2[len(s2)-2]
-				key := strings.Trim(uncroppedKey, "{")
-				key = strings.Trim(key, "\"")
-				keys = append(keys, key)
-			}
-		}
-
+func Map(m map[string]config.Permission) (map[string]config.Permission, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	dec := gob.NewDecoder(&buf)
+	err := enc.Encode(m)
+	if err != nil {
+		return nil, err
 	}
-	return keys
+	var copy map[string]config.Permission
+	err = dec.Decode(&copy)
+	if err != nil {
+		return nil, err
+	}
+	return copy, nil
 }

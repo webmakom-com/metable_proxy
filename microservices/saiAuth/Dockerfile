@@ -13,6 +13,6 @@ RUN ln -sf server.rsa.crt server.crt
 RUN chmod +x sai-auth
 CMD ./sai-auth start
 
-EXPOSE 8000
+EXPOSE 8888
 EXPOSE 8800
 EXPOSE 8803

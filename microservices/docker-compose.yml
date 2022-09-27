@@ -6,7 +6,7 @@ services:
       context: ./saiAuth
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8888:8888"
       - "8800:8800"
       - "8803:8803"
 
