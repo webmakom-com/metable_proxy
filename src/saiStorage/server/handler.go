@@ -140,7 +140,7 @@ func (s Server) upsert(client mongo.Client, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	mongoErr := client.Upsert(request.Collection, request.Select, bson.M{"$set": request.Data})
+	mongoErr := client.Upsert(request.Collection, request.Select, request.Data)
 
 	if mongoErr != nil {
 		fmt.Println("Mongo error:", mongoErr)
