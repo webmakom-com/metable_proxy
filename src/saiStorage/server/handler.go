@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/webmakom-com/saiStorage/mongo"
 	"github.com/webmakom-com/saiStorage/utils"
 	"go.mongodb.org/mongo-driver/bson"
@@ -89,6 +90,9 @@ func (s Server) save(client mongo.Client, w http.ResponseWriter, r *http.Request
 		fmt.Printf("Wrong JSON: %v", decoderErr)
 		return
 	}
+
+	uuid := uuid.New()
+	request.Data["internal_id"] = uuid.String()
 
 	mongoErr := client.Insert(request.Collection, request.Data)
 
