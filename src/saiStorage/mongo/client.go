@@ -3,6 +3,7 @@ package mongo
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -210,15 +211,32 @@ func (c Client) Remove(collectionName string, selector map[string]interface{}) e
 
 func (c Client) preprocessSelector(selector map[string]interface{}) map[string]interface{} {
 	if selector["_id"] != nil {
-		objID, err := primitive.ObjectIDFromHex(selector["_id"].(string))
-
-		if err != nil {
-			fmt.Println("Wrong objectId string")
+		switch selector["_id"].(type) {
+		case string:
+			objID, err := primitive.ObjectIDFromHex(selector["_id"].(string))
+			if err != nil {
+				fmt.Println("Wrong objectId string")
+				return selector
+			}
+			selector["_id"] = objID
+		case map[string]interface{}:
+			objIDslice := make([]primitive.ObjectID, 0)
+			m := selector["_id"].(map[string]interface{})
+			for k, v := range m {
+				for _, s := range v.([]interface{}) {
+					objID, err := primitive.ObjectIDFromHex(s.(string))
+					if err != nil {
+						continue
+					}
+					objIDslice = append(objIDslice, objID)
+				}
+				m[k] = objIDslice
+			}
+			selector["_id"] = m
+		default:
+			fmt.Printf("wrong type for preprocessSelector 2: %+v, type : %s", selector["_id"], reflect.TypeOf(selector["_id"]))
 			return selector
 		}
-
-		selector["_id"] = objID
 	}
-
 	return selector
 }
