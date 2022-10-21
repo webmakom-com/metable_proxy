@@ -59,6 +59,8 @@ func (am Manager) Register(r map[string]interface{}, t string) interface{} {
 		return false
 	}
 
+	r["password"] = am.createPass(r["password"].(string))
+
 	if am.isUserExists(r) {
 		fmt.Println("User exists")
 		return false
@@ -67,8 +69,6 @@ func (am Manager) Register(r map[string]interface{}, t string) interface{} {
 	if r["roles"] == nil || slices.Contains(r["roles"].([]string), "Admin") {
 		r["roles"] = [1]string{"User"}
 	}
-
-	r["password"] = am.createPass(r["password"].(string))
 
 	err, result := am.Database.Put("users", r, am.Config.Token)
 
@@ -278,7 +278,7 @@ func (am Manager) isAccessRequestWrong(r map[string]interface{}) bool {
 }
 
 func (am Manager) isUserExists(r map[string]interface{}) bool {
-	err, result := am.Database.Get("auth", bson.M{"name": r["name"]}, bson.M{}, am.Config.Token)
+	err, result := am.Database.Get("users", r, bson.M{}, am.Config.Token)
 	if err != nil {
 		fmt.Println(err)
 		return true
