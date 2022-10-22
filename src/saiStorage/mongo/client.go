@@ -223,18 +223,25 @@ func (c Client) preprocessSelector(selector map[string]interface{}) map[string]i
 			objIDslice := make([]primitive.ObjectID, 0)
 			m := selector["_id"].(map[string]interface{})
 			for k, v := range m {
-				for _, s := range v.([]interface{}) {
-					objID, err := primitive.ObjectIDFromHex(s.(string))
-					if err != nil {
-						continue
+				switch v.(type) {
+				case []interface{}:
+					for _, s := range v.([]interface{}) {
+						objID, err := primitive.ObjectIDFromHex(s.(string))
+						if err != nil {
+							continue
+						}
+						objIDslice = append(objIDslice, objID)
 					}
-					objIDslice = append(objIDslice, objID)
+					m[k] = objIDslice
+				default:
+					fmt.Printf("wrong type for preprocessSelector: %+v, type : %s", m, reflect.TypeOf(v))
+					return selector
 				}
-				m[k] = objIDslice
+
 			}
 			selector["_id"] = m
 		default:
-			fmt.Printf("wrong type for preprocessSelector 2: %+v, type : %s", selector["_id"], reflect.TypeOf(selector["_id"]))
+			fmt.Printf("wrong type for preprocessSelector: %+v, type : %s", selector["_id"], reflect.TypeOf(selector["_id"]))
 			return selector
 		}
 	}
