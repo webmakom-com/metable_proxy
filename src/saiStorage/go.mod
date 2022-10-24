@@ -3,6 +3,7 @@ module github.com/webmakom-com/saiStorage
 go 1.18
 
 require (
+	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/slayer/autorestart v0.0.0-20170706172547-5ebd91f955ae
