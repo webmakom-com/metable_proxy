@@ -279,7 +279,7 @@ func (am Manager) isAccessRequestWrong(r map[string]interface{}) bool {
 
 func (am Manager) isUserExists(r map[string]interface{}) bool {
 	err, result := am.Database.Get("users", r, bson.M{}, am.Config.Token)
-	if err != nil {
+	if err != nil && result != nil {
 		fmt.Println(err)
 		return true
 	}
