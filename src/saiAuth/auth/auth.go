@@ -100,7 +100,7 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 	}
 
 	jsonErr := json.Unmarshal(result, &wrappedResult)
-
+	fmt.Println(string(result))
 	if jsonErr != nil {
 		fmt.Println(string(result))
 		fmt.Println(jsonErr)
@@ -278,7 +278,6 @@ func (am Manager) isAccessRequestWrong(r map[string]interface{}) bool {
 }
 
 func (am Manager) isUserExists(r map[string]interface{}) bool {
-	r["password"] = am.createPass(r["password"].(string))
 	err, result := am.Database.Get("users", r, bson.M{}, am.Config.Token)
 
 	if err != nil {
