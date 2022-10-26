@@ -1,10 +1,14 @@
 package server
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
-	"reflect"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/webmakom-com/saiStorage/config"
@@ -17,6 +21,11 @@ type Server struct {
 	Config    config.Configuration
 	Websocket bool
 	Client    *mongo.Client
+}
+
+type AuthRequest struct {
+	Collection string `json:"collection"`
+	Method     string `json:"method"`
 }
 
 var ws websocket.Manager
@@ -35,6 +44,7 @@ func (s Server) Start() {
 		fmt.Println("Could not connect to the mongo server:", err)
 	}
 	s.Client = &client
+	defer s.Client.Host.Disconnect(context.Background())
 	r := mux.NewRouter()
 	http.Handle("/", r)
 
@@ -112,53 +122,45 @@ func (s Server) handleConnections(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) checkPermissionRequest(r *http.Request, collection, method string) error {
 	headers := r.Header
-	token, ok := headers["Token"]
+	_, ok := headers["Token"]
 
 	if !ok {
 		return fmt.Errorf("empty token provided")
 	}
 
-	res, err := s.Client.FindOne("tokens", bson.M{"Name": token})
+	reqBody, err := json.Marshal(AuthRequest{
+		Collection: collection,
+		Method:     method,
+	})
 	if err != nil {
 		return err
 	}
 
-	permMap, ok := res["Permissions"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("wrong type of permissions, type : %+v\n", reflect.TypeOf(permMap))
+	client := &http.Client{
+		Timeout: 10 * time.Second,
 	}
-	collectionName, ok := permMap[collection]
-	if !ok {
-		return fmt.Errorf("token permissions for collection : %s not found", collection)
+	accessURL := fmt.Sprintf("http://%s:%s/access", s.Config.SaiAuth.Host, s.Config.SaiAuth.Port)
+	req, err := http.NewRequest("GET", accessURL, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return err
+	}
+	req.Header = headers
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
 	}
 
-	collectionPermMap, ok := collectionName.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("wrong type of collection permissions, type : %+v\n", reflect.TypeOf(collectionName))
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
 	}
 
-	methodsMap, ok := collectionPermMap["Methods"]
-	if !ok {
-		return fmt.Errorf("methods for collection : %s not found", collection)
-	}
+	defer resp.Body.Close()
 
-	methods, ok := methodsMap.(map[string]bool)
-	if !ok {
-		return fmt.Errorf("wrong type of methods, type : %+v\n", reflect.TypeOf(methodsMap))
+	if string(body) == "true" {
+		return nil
 	}
+	return errors.New("Method or collection is not allowed\n")
 
-	methodsSlice := make([]string, 0)
-
-	for k, v := range methods {
-		if v == true {
-			methodsSlice = append(methodsSlice, k)
-		}
-	}
-
-	for _, m := range methodsSlice {
-		if method == m {
-			return nil
-		}
-	}
-	return fmt.Errorf("Method %s is not allowed")
 }

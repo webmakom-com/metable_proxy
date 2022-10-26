@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -46,8 +45,6 @@ func (s Server) handleServerRequest(w http.ResponseWriter, r *http.Request) {
 			s.remove(w, r, "remove")
 		}
 	}
-
-	s.Client.Host.Disconnect(context.Background())
 }
 
 func (s Server) get(w http.ResponseWriter, r *http.Request, method string) {
@@ -65,6 +62,7 @@ func (s Server) get(w http.ResponseWriter, r *http.Request, method string) {
 		if err != nil {
 			fmt.Println(err)
 			w.Write([]byte(err.Error()))
+			return
 		}
 	}
 
@@ -98,6 +96,7 @@ func (s Server) save(w http.ResponseWriter, r *http.Request, method string) {
 		if err != nil {
 			fmt.Println(err)
 			w.Write([]byte(err.Error()))
+			return
 		}
 	}
 
@@ -134,6 +133,7 @@ func (s Server) update(w http.ResponseWriter, r *http.Request, method string) {
 		if err != nil {
 			fmt.Println(err)
 			w.Write([]byte(err.Error()))
+			return
 		}
 	}
 
@@ -167,6 +167,7 @@ func (s Server) upsert(w http.ResponseWriter, r *http.Request, method string) {
 		if err != nil {
 			fmt.Println(err)
 			w.Write([]byte(err.Error()))
+			return
 		}
 	}
 
@@ -200,6 +201,7 @@ func (s Server) remove(w http.ResponseWriter, r *http.Request, method string) {
 		if err != nil {
 			fmt.Println(err)
 			w.Write([]byte(err.Error()))
+			return
 		}
 	}
 

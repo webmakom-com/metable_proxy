@@ -18,13 +18,12 @@ services:
       - "8801:8801"
       - "8802:8802"
 
-#  sai-contract-explorer:
-#    build:
-#      context: ./saiContractExplorer
-#      dockerfile: Dockerfile
-#    ports:
-#      - "8817:8817"
-#    volumes:
-#      - ./saiContractExplorer/build/block.data:/srv/block.data
-#      - ./saiContractExplorer/build/config.json:/srv/config.json
-
+  sai-contract-explorer:
+    build:
+      context: ./saiContractExplorer
+      dockerfile: Dockerfile
+    ports:
+      - "8817:8817"
+    volumes:
+      - ./saiContractExplorer/build/block.data:/srv/block.data
+      - ./saiContractExplorer/build/config.json:/srv/config.json

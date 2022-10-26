@@ -40,6 +40,10 @@ type Configuration struct {
 	Geth              []string
 	Sleep             int
 	UsePermissionAuth bool
+	SaiAuth           struct {
+		Host string
+		Port string
+	}
 }
 
 func Load() Configuration {
