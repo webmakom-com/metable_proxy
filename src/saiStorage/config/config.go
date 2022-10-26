@@ -37,8 +37,9 @@ type Configuration struct {
 		Address string
 		ABI     string
 	}
-	Geth  []string
-	Sleep int
+	Geth              []string
+	Sleep             int
+	UsePermissionAuth bool
 }
 
 func Load() Configuration {

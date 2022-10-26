@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/webmakom-com/saiAuth/auth"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/webmakom-com/saiAuth/auth"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -78,7 +79,7 @@ func (s Server) Start() {
 
 	r.HandleFunc("/{any}", s.handleHttpConnections)
 
-	fmt.Println("Server has been started!")
+	fmt.Println("Server has been started v1.0")
 	httpErr := http.ListenAndServe(s.Config.HttpServer.Host+":"+s.Config.HttpServer.Port, nil)
 
 	if httpErr != nil {
