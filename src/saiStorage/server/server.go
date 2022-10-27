@@ -1,12 +1,18 @@
 package server
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/webmakom-com/saiStorage/config"
+	"github.com/webmakom-com/saiStorage/mongo"
 	"github.com/webmakom-com/saiStorage/websocket"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -14,6 +20,12 @@ import (
 type Server struct {
 	Config    config.Configuration
 	Websocket bool
+	Client    *mongo.Client
+}
+
+type AuthRequest struct {
+	Collection string `json:"collection"`
+	Method     string `json:"method"`
 }
 
 var ws websocket.Manager
@@ -26,6 +38,13 @@ func NewServer(c config.Configuration, w bool) Server {
 }
 
 func (s Server) Start() {
+	client, err := mongo.NewMongoClient(s.Config)
+
+	if err != nil {
+		fmt.Println("Could not connect to the mongo server:", err)
+	}
+	s.Client = &client
+	defer s.Client.Host.Disconnect(context.Background())
 	r := mux.NewRouter()
 	http.Handle("/", r)
 
@@ -37,7 +56,7 @@ func (s Server) Start() {
 	r.HandleFunc("/{any}", s.handleConnections)
 
 	fmt.Println("Server has been started!")
-	err := http.ListenAndServe(s.Config.HttpServer.Host+":"+s.Config.HttpServer.Port, nil)
+	err = http.ListenAndServe(s.Config.HttpServer.Host+":"+s.Config.HttpServer.Port, nil)
 
 	if err != nil {
 		fmt.Println("Server error: ", err)
@@ -87,15 +106,61 @@ func (s Server) handleConnections(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-
-	if !s.hasAccess(r) {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Println("Unauthorized access")
-		message, _ := json.Marshal(bson.M{"message": "Unauthorized access"})
-		_, _ = w.Write(message)
-		return
+	if !s.Config.UsePermissionAuth {
+		if !s.hasAccess(r) {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Println("Unauthorized access")
+			message, _ := json.Marshal(bson.M{"message": "Unauthorized access"})
+			_, _ = w.Write(message)
+			return
+		}
 	}
 
 	s.handleServerRequest(w, r)
+}
+
+func (s Server) checkPermissionRequest(r *http.Request, collection, method string) error {
+	headers := r.Header
+	_, ok := headers["Token"]
+
+	if !ok {
+		return fmt.Errorf("empty token provided")
+	}
+
+	reqBody, err := json.Marshal(AuthRequest{
+		Collection: collection,
+		Method:     method,
+	})
+	if err != nil {
+		return err
+	}
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	accessURL := fmt.Sprintf("http://%s:%s/access", s.Config.SaiAuth.Host, s.Config.SaiAuth.Port)
+	req, err := http.NewRequest("GET", accessURL, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return err
+	}
+	req.Header = headers
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if string(body) == "true" {
+		return nil
+	}
+	return errors.New("Method or collection is not allowed\n")
+
 }

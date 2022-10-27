@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -24,39 +23,31 @@ type jsonRequestType struct {
 }
 
 func (s Server) handleServerRequest(w http.ResponseWriter, r *http.Request) {
-	client, err := mongo.NewMongoClient(s.Config)
-
-	if err != nil {
-		fmt.Println("Could not connect to the mongo server:", err)
-	}
-
 	switch r.URL.Path {
 	case "/get":
 		{
-			s.get(client, w, r)
+			s.get(w, r, "get")
 		}
 	case "/save":
 		{
-			s.save(client, w, r)
+			s.save(w, r, "save")
 		}
 	case "/update":
 		{
-			s.update(client, w, r)
+			s.update(w, r, "update")
 		}
 	case "/upsert":
 		{
-			s.upsert(client, w, r)
+			s.upsert(w, r, "upsert")
 		}
 	case "/remove":
 		{
-			s.remove(client, w, r)
+			s.remove(w, r, "remove")
 		}
 	}
-
-	client.Host.Disconnect(context.Background())
 }
 
-func (s Server) get(client mongo.Client, w http.ResponseWriter, r *http.Request) {
+func (s Server) get(w http.ResponseWriter, r *http.Request, method string) {
 	var request jsonRequestType
 	decoder := json.NewDecoder(r.Body)
 	decoderErr := decoder.Decode(&request)
@@ -66,7 +57,16 @@ func (s Server) get(client mongo.Client, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	result, mongoErr := client.Find(request.Collection, request.Select, request.Options)
+	if s.Config.UsePermissionAuth {
+		err := s.checkPermissionRequest(r, request.Collection, method)
+		if err != nil {
+			fmt.Println(err)
+			w.Write([]byte(err.Error()))
+			return
+		}
+	}
+
+	result, mongoErr := s.Client.Find(request.Collection, request.Select, request.Options)
 
 	if mongoErr != nil {
 		fmt.Println("Mongo error:", mongoErr)
@@ -81,7 +81,7 @@ func (s Server) get(client mongo.Client, w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (s Server) save(client mongo.Client, w http.ResponseWriter, r *http.Request) {
+func (s Server) save(w http.ResponseWriter, r *http.Request, method string) {
 	var request jsonRequestType
 	decoder := json.NewDecoder(r.Body)
 	decoderErr := decoder.Decode(&request)
@@ -89,12 +89,21 @@ func (s Server) save(client mongo.Client, w http.ResponseWriter, r *http.Request
 	if decoderErr != nil {
 		fmt.Printf("Wrong JSON: %v", decoderErr)
 		return
+	}
+
+	if s.Config.UsePermissionAuth {
+		err := s.checkPermissionRequest(r, request.Collection, method)
+		if err != nil {
+			fmt.Println(err)
+			w.Write([]byte(err.Error()))
+			return
+		}
 	}
 
 	uuid := uuid.New()
 	request.Data["internal_id"] = uuid.String()
 
-	mongoErr := client.Insert(request.Collection, request.Data)
+	mongoErr := s.Client.Insert(request.Collection, request.Data)
 
 	if mongoErr != nil {
 		fmt.Println("Mongo error:", mongoErr)
@@ -109,7 +118,7 @@ func (s Server) save(client mongo.Client, w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (s Server) update(client mongo.Client, w http.ResponseWriter, r *http.Request) {
+func (s Server) update(w http.ResponseWriter, r *http.Request, method string) {
 	var request jsonRequestType
 	decoder := json.NewDecoder(r.Body)
 	decoderErr := decoder.Decode(&request)
@@ -119,7 +128,16 @@ func (s Server) update(client mongo.Client, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	mongoErr := client.Update(request.Collection, request.Select, bson.M{"$set": request.Data})
+	if s.Config.UsePermissionAuth {
+		err := s.checkPermissionRequest(r, request.Collection, method)
+		if err != nil {
+			fmt.Println(err)
+			w.Write([]byte(err.Error()))
+			return
+		}
+	}
+
+	mongoErr := s.Client.Update(request.Collection, request.Select, bson.M{"$set": request.Data})
 
 	if mongoErr != nil {
 		fmt.Println("Mongo error:", mongoErr)
@@ -134,7 +152,7 @@ func (s Server) update(client mongo.Client, w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func (s Server) upsert(client mongo.Client, w http.ResponseWriter, r *http.Request) {
+func (s Server) upsert(w http.ResponseWriter, r *http.Request, method string) {
 	var request jsonRequestType
 	decoder := json.NewDecoder(r.Body)
 	decoderErr := decoder.Decode(&request)
@@ -144,7 +162,16 @@ func (s Server) upsert(client mongo.Client, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	mongoErr := client.Upsert(request.Collection, request.Select, request.Data)
+	if s.Config.UsePermissionAuth {
+		err := s.checkPermissionRequest(r, request.Collection, method)
+		if err != nil {
+			fmt.Println(err)
+			w.Write([]byte(err.Error()))
+			return
+		}
+	}
+
+	mongoErr := s.Client.Upsert(request.Collection, request.Select, request.Data)
 
 	if mongoErr != nil {
 		fmt.Println("Mongo error:", mongoErr)
@@ -159,7 +186,7 @@ func (s Server) upsert(client mongo.Client, w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func (s Server) remove(client mongo.Client, w http.ResponseWriter, r *http.Request) {
+func (s Server) remove(w http.ResponseWriter, r *http.Request, method string) {
 	var request jsonRequestType
 	decoder := json.NewDecoder(r.Body)
 	decoderErr := decoder.Decode(&request)
@@ -169,7 +196,16 @@ func (s Server) remove(client mongo.Client, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	mongoErr := client.Remove(request.Collection, request.Select)
+	if s.Config.UsePermissionAuth {
+		err := s.checkPermissionRequest(r, request.Collection, method)
+		if err != nil {
+			fmt.Println(err)
+			w.Write([]byte(err.Error()))
+			return
+		}
+	}
+
+	mongoErr := s.Client.Remove(request.Collection, request.Select)
 
 	if mongoErr != nil {
 		fmt.Println("Mongo error:", mongoErr)

@@ -29,5 +29,10 @@
     "Geth": [
         "http://geth-dev.sator.io:8545"
     ],
-    "Sleep": 20
+    "Sleep": 20,
+    "UsePermissionAuth":true,
+    "SaiAuth": {
+        "Host": "sai-auth",
+        "Port": "8800"
+    }
 }

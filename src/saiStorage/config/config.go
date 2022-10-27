@@ -37,8 +37,13 @@ type Configuration struct {
 		Address string
 		ABI     string
 	}
-	Geth  []string
-	Sleep int
+	Geth              []string
+	Sleep             int
+	UsePermissionAuth bool
+	SaiAuth           struct {
+		Host string
+		Port string
+	}
 }
 
 func Load() Configuration {

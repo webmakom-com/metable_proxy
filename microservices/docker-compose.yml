@@ -27,4 +27,3 @@ services:
     volumes:
       - ./saiContractExplorer/build/block.data:/srv/block.data
       - ./saiContractExplorer/build/config.json:/srv/config.json
-
