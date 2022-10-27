@@ -49,8 +49,8 @@ func NewAuthManager(c config.Configuration) Manager {
 }
 
 func (am Manager) Register(r map[string]interface{}, t string) interface{} {
-	if !am.Access(r, t).(bool) {
-		fmt.Println("Unauthorized request")
+	if t != am.Config.Token {
+		fmt.Println("Wrong auth request")
 		return false
 	}
 
@@ -81,7 +81,6 @@ func (am Manager) Register(r map[string]interface{}, t string) interface{} {
 }
 
 func (am Manager) Login(r map[string]interface{}) interface{} {
-	fmt.Printf("Login - get r : %+v\n", r) //debug
 	if am.isAuthRequestWrong(r) {
 		fmt.Println("Wrong auth request")
 		return false
@@ -99,8 +98,6 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 		fmt.Println(err)
 		return false
 	}
-
-	fmt.Printf("Login - result from db : %s\n", string(result)) //debug
 
 	jsonErr := json.Unmarshal(result, &wrappedResult)
 	fmt.Println(string(result))
@@ -125,8 +122,6 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 		fmt.Println(jsonErr)
 		return false
 	}
-
-	fmt.Printf("Login - users : %+v\n", users) //debug
 
 	if len(users) == 0 {
 		fmt.Println("Missing user")
@@ -172,9 +167,6 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 }
 
 func (am Manager) Access(r map[string]interface{}, t string) interface{} {
-	if t == am.Config.Token {
-		return true
-	}
 
 	if am.isAccessRequestWrong(r) {
 		fmt.Println("Wrong access request")
