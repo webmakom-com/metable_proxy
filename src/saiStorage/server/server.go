@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
@@ -100,6 +101,8 @@ func (s Server) hasAccess(r *http.Request) bool {
 
 func (s Server) handleConnections(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	log.Printf("got request %+v\n", r) //DEBUG
 
 	err := r.ParseForm()
 

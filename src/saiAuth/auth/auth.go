@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,6 +50,7 @@ func NewAuthManager(c config.Configuration) Manager {
 }
 
 func (am Manager) Register(r map[string]interface{}, t string) interface{} {
+	log.Println("Register method invoked") //DEBUG
 	if t != am.Config.Token {
 		fmt.Println("Wrong auth request")
 		return false
@@ -167,6 +169,9 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 }
 
 func (am Manager) Access(r map[string]interface{}, t string) interface{} {
+	if t == am.Config.Token {
+		return true
+	}
 
 	if am.isAccessRequestWrong(r) {
 		fmt.Println("Wrong access request")
