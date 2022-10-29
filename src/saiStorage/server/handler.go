@@ -17,7 +17,7 @@ func (s Server) handleWebSocketRequest(msg []byte) {
 
 type jsonRequestType struct {
 	Collection string        `json:"collection"`
-	Select     bson.M        `json:"select"`
+	Select     bson.M        `json:"select,omitempty"`
 	Options    mongo.Options `json:"options"`
 	Data       bson.M        `json:"data"`
 }
@@ -58,7 +58,7 @@ func (s Server) get(w http.ResponseWriter, r *http.Request, method string) {
 	}
 
 	if s.Config.UsePermissionAuth {
-		err := s.checkPermissionRequest(r, request.Collection, method)
+		err := s.checkPermissionRequest(r, request.Collection, method, request.Select)
 		if err != nil {
 			fmt.Println(err)
 			w.Write([]byte(err.Error()))
@@ -92,7 +92,7 @@ func (s Server) save(w http.ResponseWriter, r *http.Request, method string) {
 	}
 
 	if s.Config.UsePermissionAuth {
-		err := s.checkPermissionRequest(r, request.Collection, method)
+		err := s.checkPermissionRequest(r, request.Collection, method, request.Select)
 		if err != nil {
 			fmt.Println(err)
 			w.Write([]byte(err.Error()))
@@ -129,7 +129,7 @@ func (s Server) update(w http.ResponseWriter, r *http.Request, method string) {
 	}
 
 	if s.Config.UsePermissionAuth {
-		err := s.checkPermissionRequest(r, request.Collection, method)
+		err := s.checkPermissionRequest(r, request.Collection, method, request.Select)
 		if err != nil {
 			fmt.Println(err)
 			w.Write([]byte(err.Error()))
@@ -163,7 +163,7 @@ func (s Server) upsert(w http.ResponseWriter, r *http.Request, method string) {
 	}
 
 	if s.Config.UsePermissionAuth {
-		err := s.checkPermissionRequest(r, request.Collection, method)
+		err := s.checkPermissionRequest(r, request.Collection, method, request.Select)
 		if err != nil {
 			fmt.Println(err)
 			w.Write([]byte(err.Error()))
@@ -197,7 +197,7 @@ func (s Server) remove(w http.ResponseWriter, r *http.Request, method string) {
 	}
 
 	if s.Config.UsePermissionAuth {
-		err := s.checkPermissionRequest(r, request.Collection, method)
+		err := s.checkPermissionRequest(r, request.Collection, method, request.Select)
 		if err != nil {
 			fmt.Println(err)
 			w.Write([]byte(err.Error()))
