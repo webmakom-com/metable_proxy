@@ -265,12 +265,14 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		}
 	} else {
 		for _, perms := range tokens[0].Permissions {
-			fmt.Printf("required field from token : %v\n", perms[r["collection"].(string)].Required[selection.Field]) //DEBUG
-			fmt.Printf("required field from selection : %s\n", selection.Field)                                       //DEBUG                                   //DEBUG
 
 			if perms[r["collection"].(string)].Required[selection.Field] == nil {
 				continue
 			}
+			fmt.Printf("REQUIRED FIELD : %s\n", perms[r["collection"].(string)].Required[selection.Field].(string)) //DEBUG
+			fmt.Printf("SELECTION FIELD : %s\n", selection.Value.(string))
+			fmt.Println(perms[r["collection"].(string)].Required[selection.Field].(string) == selection.Value.(string)) //DEBUG
+
 			if perms[r["collection"].(string)].Exists &&
 				perms[r["collection"].(string)].Methods[r["method"].(string)] &&
 				perms[r["collection"].(string)].Required[selection.Field].(string) == selection.Value.(string) {
