@@ -146,7 +146,7 @@ func (s Server) checkPermissionRequest(r *http.Request, collection, method strin
 		Timeout: 10 * time.Second,
 	}
 	accessURL := fmt.Sprintf("http://%s:%s/access", s.Config.SaiAuth.Host, s.Config.SaiAuth.Port)
-	req, err := http.NewRequest("GET", accessURL, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest("POST", accessURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return err
 	}
