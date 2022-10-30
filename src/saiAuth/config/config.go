@@ -54,6 +54,8 @@ type Configuration struct {
 		Exists      bool
 		Permissions map[string]Permission
 	}
+	AccessTokenExp  int64
+	RefreshTokenExp int64
 }
 
 func Load() Configuration {

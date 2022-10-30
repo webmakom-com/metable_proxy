@@ -16,11 +16,15 @@ func (s Server) Register(h HandlerRequest) interface{} {
 }
 
 func (s Server) Login(h HandlerRequest) interface{} {
-	return s.AuthManager.Login(h.getInterface())
+	return s.AuthManager.Login(h.getInterface(), h.Token)
 }
 
 func (s Server) Access(h HandlerRequest) interface{} {
 	return s.AuthManager.Access(h.getInterface(), h.Token)
+}
+
+func (s Server) Auth(h HandlerRequest) interface{} {
+	return s.AuthManager.Auth(h.getInterface(), h.Token)
 }
 
 func (h HandlerRequest) getInterface() map[string]interface{} {

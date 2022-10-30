@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/webmakom-com/saiAuth/auth"
+	"go.uber.org/zap"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -40,11 +41,11 @@ var clients = make(map[string]*websocket.Conn)
 var broadcast = make(chan []byte)
 var upgrader = websocket.Upgrader{}
 
-func NewServer(c config.Configuration, w bool) Server {
+func NewServer(c config.Configuration, w bool, logger *zap.Logger) Server {
 	return Server{
 		Config:      c,
 		Websocket:   w,
-		AuthManager: auth.NewAuthManager(c),
+		AuthManager: auth.NewAuthManager(c, logger),
 	}
 }
 

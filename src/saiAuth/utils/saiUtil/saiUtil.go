@@ -12,7 +12,7 @@ func Send(url string, data io.Reader, token string) (error, []byte) {
 	req, err := http.NewRequest("POST", url, data)
 
 	if err != nil {
-		fmt.Println("Database error: ", err)
+		fmt.Println("Database error 1: ", err)
 		return err, []byte("")
 	}
 
@@ -23,7 +23,7 @@ func Send(url string, data io.Reader, token string) (error, []byte) {
 	resp, err := client.Do(req)
 
 	if err != nil {
-		fmt.Println("Database error: ", err)
+		fmt.Println("Database error 2: ", err)
 		return err, []byte("")
 	}
 
