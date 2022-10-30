@@ -183,7 +183,7 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		return false
 	}
 
-	err, result := am.Database.Get("tokens", bson.M{"Name": t}, bson.M{}, am.Config.Token)
+	err, result := am.Database.Get("tokens", bson.M{"name": t}, bson.M{}, am.Config.Token)
 
 	if err != nil {
 		fmt.Println(err)
@@ -209,6 +209,8 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		fmt.Println(jsonErr)
 		return false
 	}
+
+	fmt.Println(string(result))
 
 	tokensMarshalled, err := json.Marshal(wrappedResult["result"])
 

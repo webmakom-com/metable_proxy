@@ -164,8 +164,8 @@ func (c Client) Find(collectionName string, selector map[string]interface{}, inp
 func (c Client) Insert(collectionName string, doc interface{}) error {
 	collection := c.GetCollection(collectionName)
 
-	processedDoc := c.preprocessDoc(doc)
-	_, err := collection.InsertOne(context.TODO(), processedDoc)
+	//processedDoc := c.preprocessDoc(doc)
+	_, err := collection.InsertOne(context.TODO(), doc)
 	if err != nil {
 		return err
 	}
