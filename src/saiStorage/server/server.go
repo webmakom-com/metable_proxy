@@ -15,6 +15,7 @@ import (
 	"github.com/webmakom-com/saiStorage/mongo"
 	"github.com/webmakom-com/saiStorage/websocket"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Server struct {
@@ -24,8 +25,9 @@ type Server struct {
 }
 
 type AuthRequest struct {
-	Collection string `json:"collection"`
-	Method     string `json:"method"`
+	Collection string      `json:"collection"`
+	Method     string      `json:"method"`
+	Select     primitive.M `json:"select,omitempty"`
 }
 
 var ws websocket.Manager
@@ -120,7 +122,7 @@ func (s Server) handleConnections(w http.ResponseWriter, r *http.Request) {
 	s.handleServerRequest(w, r)
 }
 
-func (s Server) checkPermissionRequest(r *http.Request, collection, method string) error {
+func (s Server) checkPermissionRequest(r *http.Request, collection, method string, selection primitive.M) error {
 	headers := r.Header
 	_, ok := headers["Token"]
 
@@ -131,6 +133,7 @@ func (s Server) checkPermissionRequest(r *http.Request, collection, method strin
 	reqBody, err := json.Marshal(AuthRequest{
 		Collection: collection,
 		Method:     method,
+		Select:     selection,
 	})
 	if err != nil {
 		return err
