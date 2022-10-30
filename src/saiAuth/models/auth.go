@@ -42,6 +42,7 @@ type RefreshToken struct {
 type LoginResponse struct {
 	*AccessToken  `json:"at"`
 	*RefreshToken `json:"rt"`
+	User          map[string]interface{} `json:"user,omitempty"`
 }
 
 type AccessTokenWithObjectID struct {

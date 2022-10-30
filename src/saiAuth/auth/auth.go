@@ -623,3 +623,41 @@ func (am Manager) getAccessToken(t string) (*models.AccessToken, error) {
 
 	return &token, nil
 }
+
+func (am Manager) Auth(r map[string]interface{}, t string) interface{} {
+	if !am.Access(r, t).(bool) {
+		fmt.Println("Unauthorized request")
+		return false
+	}
+
+	var perms []map[string]config.Permission
+
+	if role, found := r["role"]; found {
+		roleName := role.(string)
+		if am.Config.Roles[roleName].Exists {
+			rolePerm, mapErr := Map(am.Config.Roles[roleName].Permissions)
+
+			if mapErr != nil {
+				fmt.Println(mapErr)
+				return false
+			}
+
+			perms = append(perms, rolePerm)
+		}
+	} else {
+		fmt.Println("Missing role")
+		return false
+	}
+
+	token := am.createToken(perms, r)
+
+	if token == nil {
+		return false
+	}
+
+	return &models.LoginResponse{
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
+		User:         r,
+	}
+}
