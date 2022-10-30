@@ -41,6 +41,11 @@ type LoginResult struct {
 	User  map[string]interface{}
 }
 
+type Selection struct {
+	Field string
+	Value interface{}
+}
+
 func NewAuthManager(c config.Configuration) Manager {
 	return Manager{
 		Config:   c,
@@ -188,9 +193,17 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		return false
 	}
 	var (
-		wrappedResult map[string]interface{}
-		tokens        []Token
+		wrappedResult  map[string]interface{}
+		tokens         []Token
+		emptySelection bool
 	)
+
+	selection := handleSelect(r)
+	if selection == nil {
+		emptySelection = true
+	}
+
+	fmt.Printf("got selection : %+v\n", selection) // DEBUG
 
 	jsonErr := json.Unmarshal(result, &wrappedResult)
 
@@ -220,10 +233,49 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		return false
 	}
 
-	for _, perms := range tokens[0].Permissions {
-		if perms[r["collection"].(string)].Exists &&
-			perms[r["collection"].(string)].Methods[r["method"].(string)] {
-			return true
+	fmt.Printf("got token : %+v\n", tokens[0]) //DEBUG
+
+	// for _, perm := range token.Permissions {
+	// 	if perm[r["collection"].(string)].Exists &&
+	// 		perm[r["collection"].(string)].Methods[r["method"].(string)] {
+	// 		if emptySelection {
+	// 			if perm[r["collection"].(string)].Required == nil {
+	// 				return true
+	// 			}
+	// 		} else {
+	// 			if perm[r["collection"].(string)].Required[selection.Field] == nil {
+	// 				continue
+	// 			} else {
+	// 				if perm[r["collection"].(string)].Required[selection.Field] == selection.Value {
+	// 					return true
+	// 				}
+	// 			}
+
+	// 		}
+	// 	}
+	// }
+
+	if emptySelection {
+		for _, perms := range tokens[0].Permissions {
+			if perms[r["collection"].(string)].Exists &&
+				perms[r["collection"].(string)].Methods[r["method"].(string)] &&
+				perms[r["collection"].(string)].Required == nil {
+				return true
+			}
+		}
+	} else {
+		for _, perms := range tokens[0].Permissions {
+			fmt.Printf("required field from token : %v\n", perms[r["collection"].(string)].Required[selection.Field]) //DEBUG
+			fmt.Printf("required field from selection : %s\n", selection.Field)                                       //DEBUG                                   //DEBUG
+
+			if perms[r["collection"].(string)].Required[selection.Field] == nil {
+				continue
+			}
+			if perms[r["collection"].(string)].Exists &&
+				perms[r["collection"].(string)].Methods[r["method"].(string)] &&
+				perms[r["collection"].(string)].Required[selection.Field].(string) == selection.Value.(string) {
+				return true
+			}
 		}
 	}
 
@@ -324,4 +376,25 @@ func Map(m map[string]config.Permission) (map[string]config.Permission, error) {
 		return nil, err
 	}
 	return copy, nil
+}
+
+func handleSelect(r map[string]interface{}) *Selection {
+	selection := &Selection{}
+
+	fmt.Printf("got selection from handle select : %+v\n", r) //DEBUG
+	s, ok := r["select"]
+	if !ok {
+		return nil
+	} else {
+		for k, v := range s.(map[string]interface{}) {
+			selection.Field = k
+			switch v.(type) {
+			case string:
+				selection.Value = v.(string)
+			case []string:
+				selection.Value = v.([]string)
+			}
+		}
+	}
+	return selection
 }
