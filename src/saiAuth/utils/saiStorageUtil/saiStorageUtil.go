@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/webmakom-com/saiAuth/utils/saiUtil"
 	"go.mongodb.org/mongo-driver/bson"
@@ -56,7 +55,6 @@ func (db Database) Get(collectionName string, criteria interface{}, options inte
 }
 
 func (db Database) Put(collectionName string, data interface{}, token string) (error, []byte) {
-	log.Println("db.put") //DEBUG
 	request := StorageRequest{collection: collectionName, data: data}
 	return db.makeRequest("save", request, token)
 }

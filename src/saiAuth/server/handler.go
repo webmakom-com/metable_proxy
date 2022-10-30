@@ -16,7 +16,7 @@ func (s Server) Register(h HandlerRequest) interface{} {
 }
 
 func (s Server) Login(h HandlerRequest) interface{} {
-	return s.AuthManager.Login(h.getInterface())
+	return s.AuthManager.Login(h.getInterface(), h.Token)
 }
 
 func (s Server) Access(h HandlerRequest) interface{} {

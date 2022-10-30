@@ -164,7 +164,8 @@ func (c Client) Find(collectionName string, selector map[string]interface{}, inp
 func (c Client) Insert(collectionName string, doc interface{}) error {
 	collection := c.GetCollection(collectionName)
 
-	_, err := collection.InsertOne(context.TODO(), doc)
+	processedDoc := c.preprocessDoc(doc)
+	_, err := collection.InsertOne(context.TODO(), processedDoc)
 	if err != nil {
 		return err
 	}
@@ -246,4 +247,26 @@ func (c Client) preprocessSelector(selector map[string]interface{}) map[string]i
 		}
 	}
 	return selector
+}
+
+// preprocess doc (insert method)
+func (c Client) preprocessDoc(doc interface{}) primitive.M {
+	m, ok := doc.(primitive.M)
+	if !ok {
+		return nil
+	}
+	if m["type"] == "refresh_token" {
+		accessToken := m["access_token"].(map[string]interface{})
+		id := accessToken["_id"].(string)
+		objID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			fmt.Println("Preprocess doc - cant create objectID for access token")
+			return nil
+		}
+		accessToken["_id"] = objID
+		return m
+
+	} else {
+		return m
+	}
 }

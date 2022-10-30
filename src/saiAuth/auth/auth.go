@@ -6,14 +6,16 @@ import (
 	"encoding/gob"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/webmakom-com/saiAuth/config"
+	"github.com/webmakom-com/saiAuth/models"
 	"github.com/webmakom-com/saiAuth/utils/saiStorageUtil"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )
 
@@ -24,12 +26,7 @@ const (
 type Manager struct {
 	Config   config.Configuration
 	Database saiStorageUtil.Database
-}
-
-type Token struct {
-	Name        string
-	Permissions []map[string]config.Permission
-	Expiration  int64
+	Logger   *zap.Logger
 }
 
 type FindResult struct {
@@ -47,29 +44,29 @@ type Selection struct {
 	Value interface{}
 }
 
-func NewAuthManager(c config.Configuration) Manager {
+func NewAuthManager(c config.Configuration, logger *zap.Logger) Manager {
 	return Manager{
 		Config:   c,
 		Database: saiStorageUtil.Storage(c.Storage.Url, c.Storage.Auth.Email, c.Storage.Auth.Password),
+		Logger:   logger,
 	}
 }
 
 func (am Manager) Register(r map[string]interface{}, t string) interface{} {
-	log.Println("Register method invoked") //DEBUG
 	if t != am.Config.Token {
-		fmt.Println("Wrong auth request")
+		am.Logger.Error("Wrong auth request : wrong config token")
 		return false
 	}
 
 	if am.isAuthRequestWrong(r) {
-		fmt.Println("Wrong auth request")
+		am.Logger.Error("Wrong auth request : password field was not found")
 		return false
 	}
 
 	r["password"] = am.createPass(r["password"].(string))
 
 	if am.isUserExists(r) {
-		fmt.Println("User exists")
+		am.Logger.Error("User already exists")
 		return false
 	}
 
@@ -80,16 +77,22 @@ func (am Manager) Register(r map[string]interface{}, t string) interface{} {
 	err, result := am.Database.Put("users", r, am.Config.Token)
 
 	if err != nil {
-		fmt.Println(err)
+		am.Logger.Error("REGISTER - DB.PUT", zap.Error(err))
 		return false
 	}
 
 	return string(result)
 }
 
-func (am Manager) Login(r map[string]interface{}) interface{} {
+func (am Manager) Login(r map[string]interface{}, token string) interface{} {
+	// handle login method with empty body
+	if r == nil {
+		am.Logger.Debug("GOT EMPTY BODY")
+		return am.HandleRefreshToken(token)
+	}
+
 	if am.isAuthRequestWrong(r) {
-		fmt.Println("Wrong auth request")
+		am.Logger.Error("Wrong auth request")
 		return false
 	}
 
@@ -167,10 +170,7 @@ func (am Manager) Login(r map[string]interface{}) interface{} {
 
 	delete(users[0], "password")
 
-	return &LoginResult{
-		Token: t.Name,
-		User:  users[0],
-	}
+	return t
 }
 
 func (am Manager) Access(r map[string]interface{}, t string) interface{} {
@@ -191,7 +191,7 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 	}
 	var (
 		wrappedResult  map[string]interface{}
-		tokens         []Token
+		tokens         []models.AccessToken
 		emptySelection bool
 	)
 
@@ -230,7 +230,9 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		return false
 	}
 
-	fmt.Printf("got token : %+v\n", tokens[0]) //DEBUG
+	token := tokens[0]
+
+	fmt.Printf("got token : %+v\n", token) //DEBUG
 
 	// for _, perm := range token.Permissions {
 	// 	if perm[r["collection"].(string)].Exists &&
@@ -278,7 +280,7 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		}
 	}
 
-	return false
+	return true
 }
 
 func (am Manager) createPass(pass string) string {
@@ -305,24 +307,91 @@ func (am Manager) replacePlaceholders(permissions []map[string]config.Permission
 	return permissions
 }
 
-func (am Manager) createToken(permissions []map[string]config.Permission, object map[string]interface{}) *Token {
-	var t = new(Token)
+func (am Manager) createToken(permissions []map[string]config.Permission, object map[string]interface{}) *models.LoginResponse {
+	// access token creating
+	at := &models.AccessToken{
+		User: &models.User{},
+	}
+	at.Type = models.AccessTokenType
 
 	hasher := sha256.New()
 	hasher.Write(uuid.New().NodeID())
 	hasher.Write([]byte(time.Now().String()))
-	t.Name = hex.EncodeToString(hasher.Sum(nil))
-	t.Permissions = am.replacePlaceholders(permissions, object)
-	t.Expiration = time.Now().Unix() + 3600
+	at.Name = hex.EncodeToString(hasher.Sum(nil))
+	at.Permissions = am.replacePlaceholders(permissions, object)
+	at.Expiration = time.Now().Unix() + am.Config.AccessTokenExp
+	am.Logger.Sugar().Debugf("LOGIN - CREATE TOKEN - USER OBJECT INSIDE CREATE TOKEN FUNC : %+v\n", object)
+	at.User.ID = object["_id"].(string)
+	at.User.InternalID = object["internal_id"].(string)
 
-	tokenErr, _ := am.Database.Put("tokens", t, am.Config.Token)
+	tokenErr, _ := am.Database.Put("tokens", at, am.Config.Token)
 
 	if tokenErr != nil {
 		fmt.Println(tokenErr)
 		return nil
 	}
 
-	return t
+	accessToken, err := am.getAccessToken(at.Name)
+	if err != nil {
+		return nil
+	}
+	at.ID = accessToken.ID
+
+	am.Logger.Sugar().Debugf("AUTH - CREATE TOKEN - GET ACCESS TOKEN : [%+v\n]", accessToken)
+
+	rt := &models.RefreshToken{
+		AccessToken: at,
+	}
+	rt.Type = models.RefreshTokenType
+
+	hasher = sha256.New()
+	hasher.Write(uuid.New().NodeID())
+	hasher.Write([]byte(time.Now().String()))
+	rt.Name = hex.EncodeToString(hasher.Sum(nil))
+
+	rtUpdatePerm := map[string]config.Permission{}
+	rtUpdatePerm["tokens"] = config.Permission{
+		Exists: true,
+		Methods: map[string]bool{
+			"update": true,
+		},
+		Required: map[string]any{
+			"name": at.Name,
+		},
+	}
+
+	rtSavePerm := map[string]config.Permission{}
+	rtSavePerm["tokens"] = config.Permission{
+		Exists: true,
+		Methods: map[string]bool{
+			"save":   true,
+			"update": true,
+		},
+		Required: map[string]any{
+			"type": models.RefreshTokenType,
+		},
+	}
+	rt.Permissions = append(rt.Permissions, rtUpdatePerm, rtSavePerm)
+
+	rt.Expiration = time.Now().Unix() + am.Config.RefreshTokenExp
+
+	tokenErr, _ = am.Database.Put("tokens", rt, am.Config.Token)
+
+	if tokenErr != nil {
+		fmt.Println(tokenErr)
+		return nil
+	}
+
+	return &models.LoginResponse{
+		AccessToken: &models.AccessToken{
+			Name:       at.Name,
+			Expiration: at.Expiration,
+		},
+		RefreshToken: &models.RefreshToken{
+			Name:       rt.Name,
+			Expiration: rt.Expiration,
+		},
+	}
 }
 
 func (am Manager) isAuthRequestWrong(r map[string]interface{}) bool {
@@ -396,4 +465,159 @@ func handleSelect(r map[string]interface{}) *Selection {
 		}
 	}
 	return selection
+}
+
+func (am Manager) HandleRefreshToken(refreshToken string) bool {
+	err, result := am.Database.Get("tokens", bson.M{"name": refreshToken}, bson.M{}, am.Config.Token)
+	if err != nil {
+		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - DB.GET", zap.Error(err))
+	}
+
+	var (
+		wrappedResult map[string]interface{}
+		tokens        []models.RefreshToken
+	)
+
+	jsonErr := json.Unmarshal(result, &wrappedResult)
+
+	if jsonErr != nil {
+		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - UNMARHSAL UNWRAPPED RESULT", zap.Error(err))
+		return false
+	}
+
+	tokensMarshalled, err := json.Marshal(wrappedResult["result"])
+
+	if err != nil {
+		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - MARHSAL TOKENS", zap.Error(err))
+		return false
+	}
+
+	jsonErr = json.Unmarshal(tokensMarshalled, &tokens)
+
+	if jsonErr != nil {
+		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - UNMARHSAL REFRESH TOKENS", zap.Error(err))
+		return false
+	}
+
+	if len(tokens) == 0 {
+		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - RESULT LENGTH == 0")
+		return false
+	}
+
+	token := tokens[0]
+
+	if token.Type != models.RefreshTokenType {
+		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - INCORRECT TYPE OF TOKEN")
+		return false
+	}
+
+	am.Logger.Sugar().Debugf("GOT REFRESH TOKEN : [%+v]", token)
+
+	hasher := sha256.New()
+	hasher.Write(uuid.New().NodeID())
+	hasher.Write([]byte(time.Now().String()))
+	accessTokenName := hex.EncodeToString(hasher.Sum(nil))
+	accessTokenExpiration := time.Now().Unix() + am.Config.AccessTokenExp
+
+	//update access token
+	filter := bson.M{"name": token.AccessToken.Name}
+	update := bson.M{"name": accessTokenName, "expiration": accessTokenExpiration}
+	err, _ = am.Database.Update("tokens", filter, update, am.Config.Token)
+	if err != nil {
+		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - UPDATE ACCESS TOKEN", zap.Error(err))
+		return false
+	}
+
+	// !!!!!!!!!!!!!! create new refresh token
+
+	token.AccessToken.Expiration = accessTokenExpiration
+	token.AccessToken.Name = accessTokenName
+	rt := &models.RefreshToken{
+		AccessToken: token.AccessToken,
+	}
+	rt.Type = models.RefreshTokenType
+
+	hasher = sha256.New()
+	hasher.Write(uuid.New().NodeID())
+	hasher.Write([]byte(time.Now().String()))
+	rt.Name = hex.EncodeToString(hasher.Sum(nil))
+
+	rtUpdatePerm := map[string]config.Permission{}
+	rtUpdatePerm["tokens"] = config.Permission{
+		Exists: true,
+		Methods: map[string]bool{
+			"update": true,
+		},
+		Required: map[string]any{
+			"name": rt.AccessToken.Name,
+		},
+	}
+
+	rtSavePerm := map[string]config.Permission{}
+	rtSavePerm["tokens"] = config.Permission{
+		Exists: true,
+		Methods: map[string]bool{
+			"save":   true,
+			"update": true,
+		},
+		Required: map[string]any{
+			"type": models.RefreshTokenType,
+		},
+	}
+	rt.Permissions = append(rt.Permissions, rtUpdatePerm, rtSavePerm)
+
+	rt.Expiration = time.Now().Unix() + am.Config.RefreshTokenExp
+
+	tokenErr, _ := am.Database.Put("tokens", rt, am.Config.Token)
+
+	if tokenErr != nil {
+		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - PUT NEW REFRESH TOKEN", zap.Error(err))
+		return false
+	}
+	return true
+
+}
+
+func (am Manager) getAccessToken(t string) (*models.AccessToken, error) {
+	err, result := am.Database.Get("tokens", bson.M{"name": t}, bson.M{}, am.Config.Token)
+
+	if err != nil {
+		return nil, err
+	}
+	var (
+		wrappedResult map[string]interface{}
+		tokens        []models.AccessToken
+	)
+
+	am.Logger.Sugar().Debugf("result from db : %s", string(result))
+
+	jsonErr := json.Unmarshal(result, &wrappedResult)
+
+	if jsonErr != nil {
+		am.Logger.Error("AUTH - GET ACCESS TOKEN - UNMARSHAL WRAPPED RESULT", zap.Error(err))
+		return nil, err
+	}
+
+	tokensMarshalled, err := json.Marshal(wrappedResult["result"])
+
+	if err != nil {
+		am.Logger.Error("AUTH - GET ACCESS TOKEN - MARSHAL RESULT", zap.Error(err))
+		return nil, err
+	}
+
+	jsonErr = json.Unmarshal(tokensMarshalled, &tokens)
+
+	if jsonErr != nil {
+		am.Logger.Error("AUTH - GET ACCESS TOKEN - UNMARSHAL  RESULT", zap.Error(err))
+		return nil, err
+	}
+
+	if len(tokens) == 0 {
+		am.Logger.Error("AUTH - GET ACCESS TOKEN - UNMARSHAL WRAPPED RESULT - EMPTY RESULT")
+		return nil, errors.New("empty result")
+	}
+
+	token := tokens[0]
+
+	return &token, nil
 }

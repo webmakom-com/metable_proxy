@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 )
@@ -21,7 +20,6 @@ func Send(url string, data io.Reader, token string) (error, []byte) {
 	req.Header.Set("Token", token)
 
 	client := &http.Client{}
-	log.Printf("send request %+v\n", req) //DEBUG
 	resp, err := client.Do(req)
 
 	if err != nil {
