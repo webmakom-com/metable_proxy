@@ -70,5 +70,7 @@
                 }
             }
         }
-    }
+    },
+    "AccessTokenExp":604800,
+    "RefreshTokenExp":2592000
 }
