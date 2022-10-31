@@ -110,7 +110,7 @@ func (am Manager) Login(r map[string]interface{}, token string) interface{} {
 	}
 
 	jsonErr := json.Unmarshal(result, &wrappedResult)
-	fmt.Println(string(result))
+
 	if jsonErr != nil {
 		fmt.Println(string(result))
 		fmt.Println(jsonErr)
@@ -171,6 +171,43 @@ func (am Manager) Login(r map[string]interface{}, token string) interface{} {
 	delete(users[0], "password")
 
 	return t
+}
+
+func (am Manager) Auth(r map[string]interface{}, t string) interface{} {
+	if !am.Access(r, t).(bool) {
+		fmt.Println("Unauthorized request")
+		return false
+	}
+
+	var perms []map[string]config.Permission
+
+	if role, found := r["role"]; found {
+		roleName := role.(string)
+		if am.Config.Roles[roleName].Exists {
+			rolePerm, mapErr := Map(am.Config.Roles[roleName].Permissions)
+
+			if mapErr != nil {
+				fmt.Println(mapErr)
+				return false
+			}
+
+			perms = append(perms, rolePerm)
+		}
+	} else {
+		fmt.Println("Missing role")
+		return false
+	}
+
+	token := am.createToken(perms, r)
+
+	if token == nil {
+		return false
+	}
+
+	return &LoginResult{
+		Token: token.Name,
+		User:  r,
+	}
 }
 
 func (am Manager) Access(r map[string]interface{}, t string) interface{} {
