@@ -213,8 +213,6 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		return false
 	}
 
-	fmt.Println(string(result))
-
 	tokensMarshalled, err := json.Marshal(wrappedResult["result"])
 
 	if err != nil {
@@ -237,18 +235,25 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 
 	token := tokens[0]
 
-	fmt.Printf("got token : %+v\n", token) //DEBUG
-
 	if !time.Now().Before(time.Unix(token.Expiration, 0)) {
 		am.Logger.Error("token expired")
 		return false
 	}
+
+	if token.Type != models.AccessTokenType {
+		am.Logger.Error("wrong type of token provided")
+		return false
+	}
+
+	am.Logger.Sugar().Debugf("token perms  = %+v", token.Permissions)
+	am.Logger.Sugar().Debugf("selection  = %+v, empty = %t", selection, emptySelection)
 
 	if emptySelection {
 		for _, perms := range tokens[0].Permissions {
 			if perms[r["collection"].(string)].Exists &&
 				perms[r["collection"].(string)].Methods[r["method"].(string)] &&
 				perms[r["collection"].(string)].Required == nil {
+				am.Logger.Sugar().Debugf("chosen r : %+v", r)
 				return true
 			}
 		}
@@ -270,7 +275,7 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		}
 	}
 
-	return true
+	return false
 }
 
 func (am Manager) createPass(pass string) string {
@@ -649,13 +654,13 @@ func (am Manager) Auth(r map[string]interface{}, t string) interface{} {
 		r["role"] = am.Config.DefaultRole
 	}
 
+	delete(r, "role")
+
 	token := am.createToken(perms, r)
 
 	if token == nil {
 		return false
 	}
-
-	delete(r, "role")
 
 	return &models.LoginResponse{
 		AccessToken:  token.AccessToken,
