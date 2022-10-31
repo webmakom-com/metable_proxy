@@ -72,5 +72,6 @@
         }
     },
     "AccessTokenExp":604800,
-    "RefreshTokenExp":2592000
+    "RefreshTokenExp":2592000,
+    "DefaultRole":"default_user"
 }

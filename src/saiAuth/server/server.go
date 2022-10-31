@@ -201,17 +201,21 @@ func (s Server) handleHttpServerRequest(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	var token string
+
 	headers := r.Header
-	token, ok := headers["Token"]
+	tokenSlice, ok := headers["Token"]
 
 	if !ok {
-		return
+		token = ""
+	} else {
+		token = tokenSlice[0]
 	}
 
 	handlerMessage := HandlerRequest{
 		Method: strings.Trim(r.URL.Path, "/"),
 		Body:   bytes,
-		Token:  token[0],
+		Token:  token,
 	}
 
 	result := s.handleServerRequest(handlerMessage)

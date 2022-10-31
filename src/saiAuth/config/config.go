@@ -56,6 +56,7 @@ type Configuration struct {
 	}
 	AccessTokenExp  int64
 	RefreshTokenExp int64
+	DefaultRole     string
 }
 
 func Load() Configuration {
