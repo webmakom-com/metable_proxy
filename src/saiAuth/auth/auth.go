@@ -469,7 +469,7 @@ func handleSelect(r map[string]interface{}) *Selection {
 	return selection
 }
 
-func (am Manager) HandleRefreshToken(refreshToken string) bool {
+func (am Manager) HandleRefreshToken(refreshToken string) *models.LoginResponse {
 	err, result := am.Database.Get("tokens", bson.M{"name": refreshToken}, bson.M{}, am.Config.Token)
 	if err != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - DB.GET", zap.Error(err))
@@ -484,33 +484,33 @@ func (am Manager) HandleRefreshToken(refreshToken string) bool {
 
 	if jsonErr != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - UNMARHSAL UNWRAPPED RESULT", zap.Error(err))
-		return false
+		return nil
 	}
 
 	tokensMarshalled, err := json.Marshal(wrappedResult["result"])
 
 	if err != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - MARHSAL TOKENS", zap.Error(err))
-		return false
+		return nil
 	}
 
 	jsonErr = json.Unmarshal(tokensMarshalled, &tokens)
 
 	if jsonErr != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - UNMARHSAL REFRESH TOKENS", zap.Error(err))
-		return false
+		return nil
 	}
 
 	if len(tokens) == 0 {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - RESULT LENGTH == 0")
-		return false
+		return nil
 	}
 
 	token := tokens[0]
 
 	if token.Type != models.RefreshTokenType {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - INCORRECT TYPE OF TOKEN")
-		return false
+		return nil
 	}
 
 	am.Logger.Sugar().Debugf("GOT REFRESH TOKEN : [%+v]", token)
@@ -527,7 +527,7 @@ func (am Manager) HandleRefreshToken(refreshToken string) bool {
 	err, _ = am.Database.Update("tokens", filter, update, am.Config.Token)
 	if err != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - UPDATE ACCESS TOKEN", zap.Error(err))
-		return false
+		return nil
 	}
 
 	// !!!!!!!!!!!!!! create new refresh token
@@ -574,9 +574,19 @@ func (am Manager) HandleRefreshToken(refreshToken string) bool {
 
 	if tokenErr != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - PUT NEW REFRESH TOKEN", zap.Error(err))
-		return false
+		return nil
 	}
-	return true
+
+	return &models.LoginResponse{
+		AccessToken: &models.AccessToken{
+			Name:       token.AccessToken.Name,
+			Expiration: token.AccessToken.Expiration,
+		},
+		RefreshToken: &models.RefreshToken{
+			Name:       rt.Name,
+			Expiration: rt.Expiration,
+		},
+	}
 
 }
 
