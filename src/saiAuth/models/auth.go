@@ -17,7 +17,7 @@ type AccessToken struct {
 	Name        string                         `json:"name"`
 	Expiration  int64                          `json:"expiration"`
 	InternalID  string                         `json:"internal_id,omitempty"`
-	User        *User                          `json:"user,omitempty"`
+	User        map[string]interface{}         `json:"user,omitempty"`
 	Permissions []map[string]config.Permission `json:"permissions,omitempty"`
 }
 

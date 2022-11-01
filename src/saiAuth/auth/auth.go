@@ -86,11 +86,14 @@ func (am Manager) Register(r map[string]interface{}, t string) interface{} {
 
 func (am Manager) Login(r map[string]interface{}, token string) interface{} {
 	// handle login method with empty body
-	if r == nil {
+	if r == nil || len(r) == 0 {
 		am.Logger.Debug("GOT EMPTY BODY")
-		return am.HandleRefreshToken(token)
+		tokens, err := am.HandleRefreshToken(token)
+		if err != nil {
+			return false
+		}
+		return tokens
 	}
-
 	if am.isAuthRequestWrong(r) {
 		am.Logger.Error("Wrong auth request")
 		return false
@@ -110,7 +113,7 @@ func (am Manager) Login(r map[string]interface{}, token string) interface{} {
 	}
 
 	jsonErr := json.Unmarshal(result, &wrappedResult)
-	fmt.Println(string(result))
+
 	if jsonErr != nil {
 		fmt.Println(string(result))
 		fmt.Println(jsonErr)
@@ -210,8 +213,6 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		return false
 	}
 
-	fmt.Println(string(result))
-
 	tokensMarshalled, err := json.Marshal(wrappedResult["result"])
 
 	if err != nil {
@@ -234,33 +235,25 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 
 	token := tokens[0]
 
-	fmt.Printf("got token : %+v\n", token) //DEBUG
+	if !time.Now().Before(time.Unix(token.Expiration, 0)) {
+		am.Logger.Error("token expired")
+		return false
+	}
 
-	// for _, perm := range token.Permissions {
-	// 	if perm[r["collection"].(string)].Exists &&
-	// 		perm[r["collection"].(string)].Methods[r["method"].(string)] {
-	// 		if emptySelection {
-	// 			if perm[r["collection"].(string)].Required == nil {
-	// 				return true
-	// 			}
-	// 		} else {
-	// 			if perm[r["collection"].(string)].Required[selection.Field] == nil {
-	// 				continue
-	// 			} else {
-	// 				if perm[r["collection"].(string)].Required[selection.Field] == selection.Value {
-	// 					return true
-	// 				}
-	// 			}
+	if token.Type != models.AccessTokenType {
+		am.Logger.Error("wrong type of token provided")
+		return false
+	}
 
-	// 		}
-	// 	}
-	// }
+	am.Logger.Sugar().Debugf("token perms  = %+v", token.Permissions)
+	am.Logger.Sugar().Debugf("selection  = %+v, empty = %t", selection, emptySelection)
 
 	if emptySelection {
 		for _, perms := range tokens[0].Permissions {
 			if perms[r["collection"].(string)].Exists &&
 				perms[r["collection"].(string)].Methods[r["method"].(string)] &&
 				perms[r["collection"].(string)].Required == nil {
+				am.Logger.Sugar().Debugf("chosen r : %+v", r)
 				return true
 			}
 		}
@@ -282,7 +275,7 @@ func (am Manager) Access(r map[string]interface{}, t string) interface{} {
 		}
 	}
 
-	return true
+	return false
 }
 
 func (am Manager) createPass(pass string) string {
@@ -311,9 +304,7 @@ func (am Manager) replacePlaceholders(permissions []map[string]config.Permission
 
 func (am Manager) createToken(permissions []map[string]config.Permission, object map[string]interface{}) *models.LoginResponse {
 	// access token creating
-	at := &models.AccessToken{
-		User: &models.User{},
-	}
+	at := &models.AccessToken{}
 	at.Type = models.AccessTokenType
 
 	hasher := sha256.New()
@@ -323,8 +314,8 @@ func (am Manager) createToken(permissions []map[string]config.Permission, object
 	at.Permissions = am.replacePlaceholders(permissions, object)
 	at.Expiration = time.Now().Unix() + am.Config.AccessTokenExp
 	am.Logger.Sugar().Debugf("LOGIN - CREATE TOKEN - USER OBJECT INSIDE CREATE TOKEN FUNC : %+v\n", object)
-	at.User.ID = object["_id"].(string)
-	at.User.InternalID = object["internal_id"].(string)
+
+	at.User = object
 
 	tokenErr, _ := am.Database.Put("tokens", at, am.Config.Token)
 
@@ -469,10 +460,11 @@ func handleSelect(r map[string]interface{}) *Selection {
 	return selection
 }
 
-func (am Manager) HandleRefreshToken(refreshToken string) *models.LoginResponse {
+func (am Manager) HandleRefreshToken(refreshToken string) (*models.LoginResponse, error) {
 	err, result := am.Database.Get("tokens", bson.M{"name": refreshToken}, bson.M{}, am.Config.Token)
 	if err != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - DB.GET", zap.Error(err))
+		return nil, err
 	}
 
 	var (
@@ -484,33 +476,38 @@ func (am Manager) HandleRefreshToken(refreshToken string) *models.LoginResponse 
 
 	if jsonErr != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - UNMARHSAL UNWRAPPED RESULT", zap.Error(err))
-		return nil
+		return nil, err
 	}
 
 	tokensMarshalled, err := json.Marshal(wrappedResult["result"])
 
 	if err != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - MARHSAL TOKENS", zap.Error(err))
-		return nil
+		return nil, err
 	}
 
 	jsonErr = json.Unmarshal(tokensMarshalled, &tokens)
 
 	if jsonErr != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - UNMARHSAL REFRESH TOKENS", zap.Error(err))
-		return nil
+		return nil, err
 	}
 
 	if len(tokens) == 0 {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - RESULT LENGTH == 0")
-		return nil
+		return nil, err
 	}
 
 	token := tokens[0]
 
 	if token.Type != models.RefreshTokenType {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - INCORRECT TYPE OF TOKEN")
-		return nil
+		return nil, err
+	}
+
+	if !time.Now().Before(time.Unix(token.Expiration, 0)) {
+		am.Logger.Error("token expired")
+		return nil, errors.New("token expired")
 	}
 
 	am.Logger.Sugar().Debugf("GOT REFRESH TOKEN : [%+v]", token)
@@ -527,7 +524,7 @@ func (am Manager) HandleRefreshToken(refreshToken string) *models.LoginResponse 
 	err, _ = am.Database.Update("tokens", filter, update, am.Config.Token)
 	if err != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - UPDATE ACCESS TOKEN", zap.Error(err))
-		return nil
+		return nil, err
 	}
 
 	// !!!!!!!!!!!!!! create new refresh token
@@ -574,19 +571,18 @@ func (am Manager) HandleRefreshToken(refreshToken string) *models.LoginResponse 
 
 	if tokenErr != nil {
 		am.Logger.Error("LOGIN - HANDLE REFRESH TOKEN - PUT NEW REFRESH TOKEN", zap.Error(err))
-		return nil
+		return nil, err
 	}
-
 	return &models.LoginResponse{
 		AccessToken: &models.AccessToken{
-			Name:       token.AccessToken.Name,
-			Expiration: token.AccessToken.Expiration,
+			Name:       accessTokenName,
+			Expiration: accessTokenExpiration,
 		},
 		RefreshToken: &models.RefreshToken{
 			Name:       rt.Name,
 			Expiration: rt.Expiration,
 		},
-	}
+	}, nil
 
 }
 
@@ -655,9 +651,10 @@ func (am Manager) Auth(r map[string]interface{}, t string) interface{} {
 			perms = append(perms, rolePerm)
 		}
 	} else {
-		fmt.Println("Missing role")
-		return false
+		r["role"] = am.Config.DefaultRole
 	}
+
+	delete(r, "role")
 
 	token := am.createToken(perms, r)
 
