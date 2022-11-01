@@ -636,22 +636,25 @@ func (am Manager) Auth(r map[string]interface{}, t string) interface{} {
 		return false
 	}
 
+	var roleName string
 	var perms []map[string]config.Permission
 
 	if role, found := r["role"]; found {
-		roleName := role.(string)
-		if am.Config.Roles[roleName].Exists {
-			rolePerm, mapErr := Map(am.Config.Roles[roleName].Permissions)
+		roleName = role.(string)
 
-			if mapErr != nil {
-				fmt.Println(mapErr)
-				return false
-			}
-
-			perms = append(perms, rolePerm)
-		}
 	} else {
-		r["role"] = am.Config.DefaultRole
+		roleName = am.Config.DefaultRole
+	}
+
+	if am.Config.Roles[roleName].Exists {
+		rolePerm, mapErr := Map(am.Config.Roles[roleName].Permissions)
+
+		if mapErr != nil {
+			fmt.Println(mapErr)
+			return false
+		}
+
+		perms = append(perms, rolePerm)
 	}
 
 	delete(r, "role")
@@ -665,6 +668,5 @@ func (am Manager) Auth(r map[string]interface{}, t string) interface{} {
 	return &models.LoginResponse{
 		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
-		User:         r,
 	}
 }
