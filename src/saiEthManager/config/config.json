@@ -10,5 +10,6 @@
         "Address": "",
         "Private": "",
         "GasLimit": 0,
-    }
+    },
+    "Token": 123
 }
