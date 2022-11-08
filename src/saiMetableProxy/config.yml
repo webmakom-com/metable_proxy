@@ -1,0 +1,16 @@
+common:
+  socket:
+    port: 8001
+  http:
+    enabled: true
+    port: 8818
+    token: 123
+  ws:
+    enabled: false
+    port: 8818
+  test: " TEST"
+specific:
+  storage:
+    token: systemBackDoor
+    host: http://sai-storage
+    port: 8801

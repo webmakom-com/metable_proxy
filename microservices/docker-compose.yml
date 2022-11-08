@@ -1,15 +1,6 @@
 version: '3'
 services:
 
-  sai-auth:
-    build:
-      context: ./saiAuth
-      dockerfile: Dockerfile
-    ports:
-      - "8888:8888"
-      - "8800:8800"
-      - "8803:8803"
-
   sai-storage:
     build:
       context: ./saiStorage
@@ -18,12 +9,40 @@ services:
       - "8801:8801"
       - "8802:8802"
 
-  sai-contract-explorer:
+  sai-web-socket:
     build:
-      context: ./saiContractExplorer
+      context: ./saiWebSocket
+      dockerfile: Dockerfile
+    ports:
+      - "8820:8820"
+    volumes:
+      - ./saiWebSocket/build/saiwebsocket.config:/srv/saiwebsocket.config
+
+  sai-eth-manager:
+    build:
+      context: ./saiEthManager
+      dockerfile: Dockerfile
+    ports:
+      - "8819:8819"
+    volumes:
+      - ./saiEthManager/build/config.json:/srv/config.json
+
+  sai-metable-proxy:
+    build:
+      context: ./saiMetableProxy
+      dockerfile: Dockerfile
+    ports:
+      - "8818:8818"
+    volumes:
+      - ./saiMetableProxy/build/config.yml:/srv/config.yml
+
+  sai-eth-indexer:
+    build:
+      context: ./saiEthIndexer
       dockerfile: Dockerfile
     ports:
       - "8817:8817"
     volumes:
-      - ./saiContractExplorer/build/block.data:/srv/block.data
-      - ./saiContractExplorer/build/config.json:/srv/config.json
+      - ./saiEthIndexer/build/block.data:/srv/block.data
+      - ./saiEthIndexer/build/config/config.json:/srv/config/config.json
+      - ./saiEthIndexer/build/config/contracts.json:/srv/config/contracts.json
