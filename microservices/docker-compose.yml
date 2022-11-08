@@ -8,6 +8,8 @@ services:
     ports:
       - "8801:8801"
       - "8802:8802"
+    volumes:
+      - /root/storage_data:/data/db
 
   sai-web-socket:
     build:
