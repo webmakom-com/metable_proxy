@@ -54,7 +54,46 @@ var GetNFTValue = saiService.HandlerElement{
 	Name:        "GetNFTValue",
 	Description: "Get nft value by id",
 	Function: func(data interface{}, token string) (interface{}, error) {
-		return "get nft info", nil
+		idp, ok := data.(map[string]interface{})["id"].(float64)
+
+		if !ok {
+			return nil, fmt.Errorf("wrong data parameter")
+		}
+
+		id := int(idp)
+
+		err, response1 := Service.Storage.Get("transactions", bson.M{"To": "0x4c504a8fba715b05512eff6ac25934dfdc34373c", "Operation": "Mint"}, bson.M{"skip": id - 1, "limit": 1})
+		if err != nil {
+			return nil, fmt.Errorf("can not get transactions from the storage : %w", err)
+		}
+
+		err, response2 := Service.Storage.Get("transactions", bson.M{"To": "0x4c504a8fba715b05512eff6ac25934dfdc34373c", "Input.tokenId": id}, bson.M{})
+		if err != nil {
+			return nil, fmt.Errorf("can not get transactions from the storage : %w", err)
+		}
+
+		var wrappedResult1 map[string][]interface{}
+		var wrappedResult2 map[string][]interface{}
+
+		jsonErr1 := json.Unmarshal(response1, &wrappedResult1)
+
+		if jsonErr1 != nil {
+			fmt.Println(string(response1))
+			fmt.Println(jsonErr1)
+			return nil, jsonErr1
+		}
+
+		jsonErr2 := json.Unmarshal(response2, &wrappedResult2)
+
+		if jsonErr2 != nil {
+			fmt.Println(string(response2))
+			fmt.Println(jsonErr2)
+			return nil, jsonErr2
+		}
+
+		response := append(wrappedResult1["result"], wrappedResult2["result"]...)
+
+		return response, nil
 	},
 }
 
@@ -63,7 +102,24 @@ var getNFTByWalletAddress = saiService.HandlerElement{
 	Name:        "getNFTByWalletAddress",
 	Description: "Get nft value by wallet address",
 	Function: func(data interface{}, token string) (interface{}, error) {
-		return "get nft by wallet address", nil
+		wallet, ok := data.(map[string]interface{})["wallet"].(string)
+
+		if !ok {
+			return nil, fmt.Errorf("wrong data parameter")
+		}
+
+		err, response := Service.Storage.Get("transactions", bson.M{"$or": bson.A{
+			bson.M{"From": wallet},
+			bson.M{"To": wallet},
+		}}, bson.M{})
+		if err != nil {
+			return nil, fmt.Errorf("can not get transactions from the storage : %w", err)
+		}
+
+		result := new(interface{})
+		json.Unmarshal(response, &result)
+
+		return result, nil
 	},
 }
 
