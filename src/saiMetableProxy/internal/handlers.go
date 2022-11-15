@@ -4,7 +4,6 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
-
 	"github.com/saiset-co/saiService"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -128,7 +127,48 @@ var getUtilityTokenBalanceByWallet = saiService.HandlerElement{
 	Name:        "getUtilityTokenBalanceByWallet",
 	Description: "Get utility token balance by wallet address",
 	Function: func(data interface{}, token string) (interface{}, error) {
-		return "get utility token balance by wallet", nil
+		var balance float64
+		wallet, ok := data.(map[string]interface{})["wallet"].(string)
+
+		if !ok {
+			return nil, fmt.Errorf("wrong data parameter")
+		}
+
+		err, response := Service.Storage.Get("transactions", bson.M{"$or": bson.A{
+			bson.M{"From": wallet},
+			bson.M{"To": wallet},
+		}}, bson.M{})
+
+		if err != nil {
+			return nil, fmt.Errorf("can not get transactions from the storage : %w", err)
+		}
+
+		var result map[string][]interface{}
+		json.Unmarshal(response, &result)
+
+		for _, v := range result["result"] {
+			transaction, ok := v.(map[string]interface{})
+
+			if !ok {
+				return nil, fmt.Errorf("can not get transactions from the response : %v", v)
+			}
+			input, ok := transaction["Input"].(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("can not get input from the transaction type: %v", transaction["Input"])
+			}
+
+			amountFloat, ok := input["amount"].(float64)
+			if !ok {
+				continue
+			}
+
+			if transaction["From"] == wallet {
+				balance = balance - amountFloat
+			}
+
+		}
+
+		return balance, nil
 	},
 }
 

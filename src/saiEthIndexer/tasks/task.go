@@ -69,7 +69,7 @@ func (t *TaskManager) ProcessBlocks() {
 
 		for i := blk.ID; i <= blockID; i++ {
 			blkInfo, err := t.EthClient.EthGetBlockByNumber(i, true)
-			if err != nil {
+			if err != nil || blkInfo == nil {
 				t.Logger.Error("tasks - ProcessBlocks - get block by number from server", zap.Error(err))
 				i--
 				continue
@@ -81,8 +81,21 @@ func (t *TaskManager) ProcessBlocks() {
 			}
 
 			t.Logger.Sugar().Debugf("block %d from %d analyzed, %d total transactions", i, blockID, len(blkInfo.Transactions))
+			receipts := map[string]*ethrpc.TransactionReceipt{}
 
-			t.BlockManager.HandleTransactions(blkInfo.Transactions)
+			for _, tr := range blkInfo.Transactions {
+				receipt, err := t.EthClient.EthGetTransactionReceipt(tr.Hash)
+
+				if err != nil || blkInfo == nil {
+					t.Logger.Error("tasks - ProcessBlocks - get transaction receipt from server", zap.Error(err))
+					i--
+					continue
+				}
+
+				receipts[tr.Hash] = receipt
+			}
+
+			t.BlockManager.HandleTransactions(blkInfo.Transactions, receipts)
 
 			if StopLoop {
 				t.Logger.Sugar().Debug("Got new contract, will continue with the new lowest block.")
